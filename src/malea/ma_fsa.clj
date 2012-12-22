@@ -13,8 +13,8 @@
         index
         (recur (inc index))))))
 
-(defn- let! [atomic-value new-value]
-  (compare-and-set! atomic-value @atomic-value new-value))
+(defmacro let! [atomic-value new-value]
+  `(compare-and-set! ~atomic-value @~atomic-value ~new-value))
 
 (defprotocol IMaFsaNode
   (edges [this])
