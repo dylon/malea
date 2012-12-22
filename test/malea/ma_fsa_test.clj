@@ -41,4 +41,3 @@
     (doseq [term exclude-set]
       (fact
         (accepts? dawg term) => false))))
-(newline)
