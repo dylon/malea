@@ -55,16 +55,13 @@
       (let [unchecked-nodes (:unchecked-nodes this)
             node (atom (if (empty? @unchecked-nodes)
                          (:root this)
-                         (last (peek @unchecked-nodes))))
-            word-length (count word)]
-        (loop [i lower-bound]
-          (when (< i word-length)
-            (let [character (nth word i)
-                  next-node (ma-fsa-node)]
-              (add-edge! @node character next-node)
-              (swap! unchecked-nodes conj [@node character next-node])
-              (let! node next-node)
-              (recur (inc i)))))
+                         (last (peek @unchecked-nodes))))]
+        (doseq [i (range lower-bound (count word))]
+          (let [character (nth word i)
+                next-node (ma-fsa-node)]
+            (add-edge! @node character next-node)
+            (swap! unchecked-nodes conj [@node character next-node])
+            (let! node next-node)))
         (finalize! @node)
         (let! previous-word word))
       this))
