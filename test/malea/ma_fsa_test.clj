@@ -7,8 +7,8 @@
 ;; copies of the Software, and to permit persons to whom the Software is
 ;; furnished to do so, subject to the following conditions:
 ;; 
-;; The above copyright notice and this permission notice shall be included in all
-;; copies or substantial portions of the Software.
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
 ;; 
 ;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -83,7 +83,7 @@
     (final? state-2) => false))
 
 (with-open [istream (clojure.java.io/reader "/usr/share/dict/american-english")]
-  (let [sample-size 1000   
+  (let [sample-size 10000   
         dictionary (sample
                      (line-seq istream) :size sample-size :replacement false)
         [include-set exclude-set] (split-at (/ sample-size 2) dictionary)
