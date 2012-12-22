@@ -23,11 +23,11 @@
     (edges root) => {})
 
   (let [root (-> root
-               (add-edge! "a" child-1)
-               (add-edge! "b" child-2))]
+               (add-edge! \a child-1)
+               (add-edge! \b child-2))]
     (fact
-      (edges root) => {"a" child-1
-                       "b" child-2})))
+      (edges root) => {\a child-1
+                       \b child-2})))
 
 (with-open [istream (clojure.java.io/reader "/usr/share/dict/american-english")]
   (let [sample-size 1000   
