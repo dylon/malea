@@ -16,15 +16,15 @@
 (defn- let! [atomic-value new-value]
   (compare-and-set! atomic-value @atomic-value new-value))
 
-(defprotocol INode
+(defprotocol IMaFsaNode
   (edges [this])
   (edge [this label])
   (final? [this])
   (add-edge! [this label node])
   (finalize! [this]))
 
-(defrecord Node [final edges]
-  INode
+(defrecord MaFsaNode [final edges]
+  IMaFsaNode
   (edges [this]
     (deref (:edges this)))
   (edge [this label]
@@ -99,7 +99,7 @@
 
 (defn ma-fsa-node
    ([final edges]
-    (Node. (atom final) (atom edges)))
+    (MaFsaNode. (atom final) (atom edges)))
    ([final]
     (ma-fsa-node final {}))
    ([]
