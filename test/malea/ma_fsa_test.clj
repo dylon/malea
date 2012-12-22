@@ -70,7 +70,7 @@
                                       \z state-2})]
   (fact
     (transitions start-state) => {\y state-1
-                     \z state-2})
+                                  \z state-2})
   (fact
     (transitions state-1) => {})
   (fact
