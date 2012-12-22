@@ -90,30 +90,30 @@
   (finalize! [this]
              "Flags this state as being accepting."))
 
-(defrecord MaFsaState [final transitions]
+(deftype MaFsaState [final transitions]
 
   IMaFsaState
 
   (transitions [this]
-    (deref (:transitions this)))
+    (deref transitions))
 
   (labels [this]
-    (keys (deref (:transitions this))))
+    (keys (deref transitions)))
 
   (transition [this label]
-    ((deref (:transitions this)) label))
+    ((deref transitions) label))
 
   (final? [this]
-    (deref (:final this)))
+    (deref final))
 
   (add-transition! [this label state]
     "Map this state to another using a distinct label for the directed edge."
-    (swap! (:transitions this) assoc label state)
+    (swap! transitions assoc label state)
     this)
 
   (finalize! [this]
     "Flag this state as being accepting."
-    (compare-and-set! (:final this) false true)
+    (compare-and-set! final false true)
     this))
 
 ;; ## MA-FSA
@@ -152,18 +152,16 @@
   (accepts? [this word]
             "Determines whether `word` is accepted by this MA-FSA."))
 
-(defrecord MaFsa [previous-word start-state unchecked-states minimized-states]
+(deftype MaFsa [previous-word start-state unchecked-states minimized-states]
 
   IMaFsa
 
   (insert [this word]
-    (let [previous-word (:previous-word this)
-          lower-bound (longest-common-prefix-length word @previous-word)]
+    (let [lower-bound (longest-common-prefix-length word @previous-word)]
       (minimize! this lower-bound)
-      (let [unchecked-states (:unchecked-states this)
-            state (atom (if (empty? @unchecked-states)
-                         (:start-state this)
-                         (last (peek @unchecked-states))))]
+      (let [state (atom (if (empty? @unchecked-states)
+                          start-state
+                          (last (peek @unchecked-states))))]
         (doseq [index (range lower-bound (count word))]
           (let [label (nth word index)
                 next-state (ma-fsa-state)]
@@ -178,19 +176,17 @@
     (minimize! this 0))
 
   (minimize! [this lower-bound]
-    (let [minimized-states (:minimized-states this)
-          unchecked-states (:unchecked-states this)]
-      (while (> (count @unchecked-states) lower-bound)
-        (let [[state label next-state] (peek @unchecked-states)]
-          (swap! unchecked-states pop)
-          (if-let [minimized-state (@minimized-states next-state)]
-            (add-transition! state label minimized-state)
-            (swap! minimized-states conj next-state))))
-      this))
+    (while (> (count @unchecked-states) lower-bound)
+      (let [[state label next-state] (peek @unchecked-states)]
+        (swap! unchecked-states pop)
+        (if-let [minimized-state (@minimized-states next-state)]
+          (add-transition! state label minimized-state)
+          (swap! minimized-states conj next-state))))
+      this)
 
   (accepts? [this word]
     (let [word-length (count word)]
-      (loop [state (:start-state this)
+      (loop [state start-state
              index 0]
         (if (nil? state)
           false
