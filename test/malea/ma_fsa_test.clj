@@ -1,70 +1,91 @@
+;; Copyright (c) 2012 Dylon Edwards
+;; 
+;; Permission is hereby granted, free of charge, to any person obtaining a copy
+;; of this software and associated documentation files (the "Software"), to deal
+;; in the Software without restriction, including without limitation the rights
+;; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+;; copies of the Software, and to permit persons to whom the Software is
+;; furnished to do so, subject to the following conditions:
+;; 
+;; The above copyright notice and this permission notice shall be included in all
+;; copies or substantial portions of the Software.
+;; 
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+;; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+;; SOFTWARE.
+
 (ns malea.ma-fsa-test
   (:use malea.ma-fsa
         midje.sweet
         incanter.stats))
 
-(let [node (ma-fsa-node)]
+(let [state (ma-fsa-state)]
   (fact
-    (edges node) => {})
+    (transitions state) => {})
   (fact
-    (final? node) => false)
-  (finalize! node)
+    (final? state) => false)
+  (finalize! state)
   (fact
-    (final? node) => true))
+    (final? state) => true))
 
-(let [node (ma-fsa-node true)]
+(let [state (ma-fsa-state true)]
   (fact
-    (edges node) => {})
+    (transitions state) => {})
   (fact
-    (final? node) => true))
+    (final? state) => true))
 
-(let [root (ma-fsa-node)
-      child-1 (ma-fsa-node)
-      child-2 (ma-fsa-node)]
-
-  (fact
-    (edges root) => {})
-  (fact
-    (edges child-1) => {})
-  (fact
-    (edges child-2) => {})
-
-  (add-edge! root \a child-1)
-  (add-edge! root \b child-2)
+(let [start-state (ma-fsa-state)
+      state-1 (ma-fsa-state)
+      state-2 (ma-fsa-state)]
 
   (fact
-    (edges root) => {\a child-1
-                     \b child-2})
+    (transitions start-state) => {})
   (fact
-    (edges child-1) => {})
+    (transitions state-1) => {})
   (fact
-    (edges child-2) => {})
-  (fact
-    (edge root \a) => child-1)
-  (fact
-    (edge root \b) => child-2))
+    (transitions state-2) => {})
 
-(let [child-1 (ma-fsa-node)
-      child-2 (ma-fsa-node)
-      root (ma-fsa-node true {\y child-1
-                              \z child-2})]
+  (add-transition! start-state \a state-1)
+  (add-transition! start-state \b state-2)
+
   (fact
-    (edges root) => {\y child-1
-                     \z child-2})
+    (transitions start-state) => {\a state-1
+                                  \b state-2})
   (fact
-    (edges child-1) => {})
+    (transitions state-1) => {})
   (fact
-    (edges child-2) => {})
+    (transitions state-2) => {})
   (fact
-    (final? root) => true)
+    (transition start-state \a) => state-1)
   (fact
-    (final? child-1) => false)
+    (transition start-state \b) => state-2))
+
+(let [state-1 (ma-fsa-state)
+      state-2 (ma-fsa-state)
+      start-state (ma-fsa-state true {\y state-1
+                                      \z state-2})]
   (fact
-    (final? child-2) => false))
+    (transitions start-state) => {\y state-1
+                     \z state-2})
+  (fact
+    (transitions state-1) => {})
+  (fact
+    (transitions state-2) => {})
+  (fact
+    (final? start-state) => true)
+  (fact
+    (final? state-1) => false)
+  (fact
+    (final? state-2) => false))
 
 (with-open [istream (clojure.java.io/reader "/usr/share/dict/american-english")]
   (let [sample-size 1000   
-        dictionary (sample (line-seq istream) :size sample-size :replacement false)
+        dictionary (sample
+                     (line-seq istream) :size sample-size :replacement false)
         [include-set exclude-set] (split-at (/ sample-size 2) dictionary)
         dawg (ma-fsa include-set)]
     (doseq [term include-set]
