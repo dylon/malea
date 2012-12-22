@@ -1,15 +1,15 @@
 ;; Copyright (c) 2012 Dylon Edwards
-;; 
+;;
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
 ;; in the Software without restriction, including without limitation the rights
 ;; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 ;; copies of the Software, and to permit persons to whom the Software is
 ;; furnished to do so, subject to the following conditions:
-;; 
+;;
 ;; The above copyright notice and this permission notice shall be included in
 ;; all copies or substantial portions of the Software.
-;; 
+;;
 ;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -116,7 +116,7 @@
     (compare-and-set! (:final this) false true)
     this))
 
-;; ## MA-FSA 
+;; ## MA-FSA
 ;; Uses the following parameters to maintain state:
 ;;
 ;; 1. `:previous-word` :=  Specifies the most recently inerserted word.
@@ -129,8 +129,8 @@
 ;;   - Initialized, by default, to an empty list.
 ;; 4. `:minimized-states` := Distinct states that have been checked for
 ;; duplication.
-;;   - Initialized, by default, to an empty set.  
-;;  
+;;   - Initialized, by default, to an empty set.
+;;
 ;; The current algorithm for constructing an MA-FSA requires that the words be
 ;; inserted in lexicographically-increasing order.  If this invariant is not
 ;; maintained, then the resulting MA-FSA may not reflect accurately on the
@@ -201,7 +201,7 @@
 
 (defn ma-fsa-state
   "Constructs a new MA-FSA state according to the following parameters:
-  
+
   1. `final` := Whether the state is accepting.
   2. `transitions` := A mapping of labels to states from the new state."
 
@@ -216,7 +216,7 @@
 
 (defn ma-fsa
   "Constructs a new MA-FSA according to the following parameters:
-  
+
   1. `dictionary` := The list of words to insert into the MA-FSA.
   2. `sorted` := Whether `dictionary` has already been sorted.  If this is
   `false`, then `dictionary` is sorted before the MA-FSA is constructed (this is
