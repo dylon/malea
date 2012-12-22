@@ -16,7 +16,7 @@ Currently, there isn't much you can do other than run tests:
 lein midje
 ```
 
-If you would like, you may use the [MA-FSA](blob/master/src/malea/ma_fsa.clj):
+If you would like, you may use the [MA-FSA](malea/blob/master/src/malea/ma_fsa.clj):
 ```clojure
 (ns foo
   (:use malea.ma-fsa))
