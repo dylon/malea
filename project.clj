@@ -1,5 +1,5 @@
 (defproject malea "0.1.0-alpha"
-  :description "Economic modeling using statistical and machine learning techniques"
+  :description "Machine Learning for Information Retrieval and Natural Language Processing (among others)"
   :url "https://github.com/dylon/malea"
   :license {:name "The MIT License"
             :url "http://www.opensource.org/licenses/mit-license.php"}
