@@ -76,10 +76,9 @@
     (let [minimized-nodes (:minimized-nodes this)
           unchecked-nodes (:unchecked-nodes this)]
       (while (> (count @unchecked-nodes) lower-bound)
-        (let [[parent character child] (peek @unchecked-nodes)
-              minimized-node (@minimized-nodes child)]
+        (let [[parent character child] (peek @unchecked-nodes)]
           (swap! unchecked-nodes pop)
-          (if minimized-node
+          (if-let [minimized-node (@minimized-nodes child)]
             (add-edge! parent character minimized-node)
             (swap! minimized-nodes conj child))))
       this))
