@@ -2,11 +2,11 @@
 
 This will be the home of many of my machine learning endeavors into infomation
 retrieval and natural language processing, among others.  I am currently porting
-my [Levenshtein Automata](https://github.com/dylon/levenshtein_automata) library
-from CoffeeScript to Clojure, to serve as the basis for selecting candidate
-words for context-sensitive spelling correction, using a language model trained
-on some corpus I have yet to select.  It is very much in the priliminary stages
-of its life, so please do not expect it to do anything fancy yet.
+my [Levenshtein Automata](levenshtein_automata) library from CoffeeScript to
+Clojure, to serve as the basis for selecting candidate words for
+context-sensitive spelling correction, using a language model trained on some
+corpus I have yet to select.  It is very much in the priliminary stages of its
+life, so please do not expect it to do anything fancy yet.
 
 ## Usage
 
