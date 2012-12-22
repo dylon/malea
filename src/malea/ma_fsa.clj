@@ -55,14 +55,14 @@
       (let [unchecked-nodes (:unchecked-nodes this)
             node (atom (if (empty? @unchecked-nodes)
                          (:root this)
-                         (last (first @unchecked-nodes))))
+                         (last (peek @unchecked-nodes))))
             word-length (count word)]
         (loop [i lower-bound]
           (when (< i word-length)
             (let [character (nth word i)
                   next-node (ma-fsa-node)]
               (add-edge! @node character next-node)
-              (swap! unchecked-nodes #(cons [@node character next-node] %))
+              (swap! unchecked-nodes conj [@node character next-node])
               (let! node next-node)
               (recur (inc i)))))
         (finalize! @node)
@@ -75,15 +75,13 @@
   (minimize! [this lower-bound]
     (let [minimized-nodes (:minimized-nodes this)
           unchecked-nodes (:unchecked-nodes this)]
-      (loop [j (count @unchecked-nodes)]
-        (when (> j lower-bound)
-          (let [[parent character child] (first @unchecked-nodes)
-                minimized-node (@minimized-nodes child)]
-            (swap! unchecked-nodes rest)
-            (if minimized-node
-              (add-edge! parent character minimized-node)
-              (swap! minimized-nodes conj child)))
-          (recur (dec j))))
+      (while (> (count @unchecked-nodes) lower-bound)
+        (let [[parent character child] (peek @unchecked-nodes)
+              minimized-node (@minimized-nodes child)]
+          (swap! unchecked-nodes pop)
+          (if minimized-node
+            (add-edge! parent character minimized-node)
+            (swap! minimized-nodes conj child))))
       this))
 
   (accepts? [this word]
