@@ -24,6 +24,10 @@
 
   (fact
     (edges root) => {})
+  (fact
+    (edges child-1) => {})
+  (fact
+    (edges child-2) => {})
 
   (add-edge! root \a child-1)
   (add-edge! root \b child-2)
@@ -32,9 +36,31 @@
     (edges root) => {\a child-1
                      \b child-2})
   (fact
+    (edges child-1) => {})
+  (fact
+    (edges child-2) => {})
+  (fact
     (edge root \a) => child-1)
   (fact
     (edge root \b) => child-2))
+
+(let [child-1 (ma-fsa-node)
+      child-2 (ma-fsa-node)
+      root (ma-fsa-node true {\y child-1
+                              \z child-2})]
+  (fact
+    (edges root) => {\y child-1
+                     \z child-2})
+  (fact
+    (edges child-1) => {})
+  (fact
+    (edges child-2) => {})
+  (fact
+    (final? root) => true)
+  (fact
+    (final? child-1) => false)
+  (fact
+    (final? child-2) => false))
 
 (with-open [istream (clojure.java.io/reader "/usr/share/dict/american-english")]
   (let [sample-size 1000   
