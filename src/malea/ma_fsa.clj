@@ -106,12 +106,16 @@
    ([]
     (ma-fsa-node false)))
 
-(defn ma-fsa [dictionary]
-  (let [previous-word (atom "")
-        root (ma-fsa-node)
-        unchecked-nodes (atom [])
-        minimized-nodes (atom #{})
-        dawg (MaFsa. previous-word root unchecked-nodes minimized-nodes)]
-    (finish!
-      (reduce #(insert %1 %2) dawg dictionary))))
+(defn ma-fsa
+  ([dictionary sorted]
+   (let [dictionary (if-not sorted (sort dictionary) dictionary)
+         previous-word (atom "")
+         root (ma-fsa-node)
+         unchecked-nodes (atom '())
+         minimized-nodes (atom #{})
+         dawg (MaFsa. previous-word root unchecked-nodes minimized-nodes)]
+     (finish!
+       (reduce #(insert %1 %2) dawg dictionary))))
+  ([dictionary]
+   (ma-fsa dictionary false)))
 

@@ -32,7 +32,7 @@
 (with-open [istream (clojure.java.io/reader "/usr/share/dict/american-english")]
   (let [sample-size 1000   
         dictionary (sample (line-seq istream) :size sample-size :replacement false)
-        include-set (sort (take (/ sample-size 2) dictionary))
+        include-set (take (/ sample-size 2) dictionary)
         exclude-set (take (/ sample-size 2) (reverse dictionary))
         dawg (ma-fsa include-set)]
     (doseq [term include-set]
