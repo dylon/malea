@@ -21,8 +21,7 @@
   (edge [this label])
   (final? [this])
   (add-edge! [this label node])
-  (finalize! [this])
-  (signature [this]))
+  (finalize! [this]))
 
 (defrecord Node [final edges]
   INode
