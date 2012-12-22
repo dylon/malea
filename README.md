@@ -21,10 +21,10 @@ You may use the
 that I just added:
 ```clojure
 (ns foo
-  (:use malea.ms-fsa))
+  (:use malea.ma-fsa))
 
 ;; Let `dictionary` be some list of terms.
-(let [dawg (ms-fsa dictionary)]
+(let [dawg (ma-fsa dictionary)]
   (accepts? dawg "bar")) ;-> Whether "bar" was among the terms of the dictionary
 ```
 
