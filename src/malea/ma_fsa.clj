@@ -170,7 +170,7 @@
       (finalize!
         (loop [index lower-bound
                state (if (empty? unchecked-states)
-                       start-state
+                       start-state ;-> new initial character
                        (last (peek unchecked-states)))]
           (if-not (< index word-length)
             state ;-> return the state to finalize!
@@ -204,9 +204,9 @@
       (loop [state start-state
              index 0]
         (if (nil? state)
-          false
+          false ;-> the previous state did not have a transition for the label
           (if (= index word-length)
-            (final? state)
+            (final? state) ;-> return whether the current state is accepting
             (let [label (nth word index)]
               (recur (transition state label) (inc index)))))))))
 
