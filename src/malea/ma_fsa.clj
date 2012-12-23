@@ -90,30 +90,31 @@
   (finalize! [this]
              "Flags this state as being accepting."))
 
-(deftype MaFsaState [final transitions]
+(deftype MaFsaState [^:unsynchronized-mutable final
+                     ^:unsynchronized-mutable transitions]
 
   IMaFsaState
 
   (transitions [this]
-    (deref transitions))
+    transitions)
 
   (labels [this]
-    (keys (deref transitions)))
+    (keys transitions))
 
   (transition [this label]
-    ((deref transitions) label))
+    (transitions label))
 
   (final? [this]
-    (deref final))
+    final)
 
   (add-transition! [this label state]
     "Map this state to another using a distinct label for the directed edge."
-    (swap! transitions assoc label state)
+    (set! transitions (assoc transitions label state))
     this)
 
   (finalize! [this]
     "Flag this state as being accepting."
-    (compare-and-set! final false true)
+    (set! final true)
     this))
 
 ;; ## MA-FSA
@@ -145,6 +146,9 @@
            "Minimizes all the states of this MA-FSA.  This is called after all
            the words have been added.")
 
+  (minimize-later! [this transition]
+                   "Adds `transition` to the list of transitions to minimize")
+
   (minimize! [this lower-bound]
              "Minimizes the unchecked states of this MA-FSA until the size of
              the stack of unchecked states is no greater than `lower-bound`.")
@@ -152,36 +156,47 @@
   (accepts? [this word]
             "Determines whether `word` is accepted by this MA-FSA."))
 
-(deftype MaFsa [previous-word start-state unchecked-states minimized-states]
+(deftype MaFsa [^:unsynchronized-mutable previous-word
+                start-state ;; immutable
+                ^:unsynchronized-mutable unchecked-states
+                ^:unsynchronized-mutable minimized-states]
 
   IMaFsa
 
   (insert [this word]
-    (let [lower-bound (longest-common-prefix-length word @previous-word)]
+    (let [lower-bound (longest-common-prefix-length word previous-word)
+          word-length (count word)]
       (minimize! this lower-bound)
-      (let [state (atom (if (empty? @unchecked-states)
-                          start-state
-                          (last (peek @unchecked-states))))]
-        (doseq [index (range lower-bound (count word))]
-          (let [label (nth word index)
-                next-state (ma-fsa-state)]
-            (add-transition! @state label next-state)
-            (swap! unchecked-states conj [@state label next-state])
-            (let! state next-state)))
-        (finalize! @state)
-        (let! previous-word word))
+      (finalize!
+        (loop [index lower-bound
+               state (if (empty? unchecked-states)
+                       start-state
+                       (last (peek unchecked-states)))]
+          (if-not (< index word-length)
+            state ;-> return the state to finalize!
+            (let [label (nth word index)
+                  next-state (ma-fsa-state)]
+              (add-transition! state label next-state)
+              (minimize-later! this [state label next-state])
+              (recur (inc index) next-state)))))
+      (set! previous-word word)
       this))
 
   (finish! [this]
     (minimize! this 0))
 
+  (minimize-later! [this transition]
+    (set! unchecked-states
+          (conj unchecked-states transition)))
+
   (minimize! [this lower-bound]
-    (while (> (count @unchecked-states) lower-bound)
-      (let [[state label next-state] (peek @unchecked-states)]
-        (swap! unchecked-states pop)
-        (if-let [minimized-state (@minimized-states next-state)]
+    (while (> (count unchecked-states) lower-bound)
+      (let [[state label next-state] (peek unchecked-states)]
+        (set! unchecked-states (pop unchecked-states))
+        (if-let [minimized-state (minimized-states next-state)]
           (add-transition! state label minimized-state)
-          (swap! minimized-states conj next-state))))
+          (set! minimized-states
+                (conj minimized-states next-state)))))
       this)
 
   (accepts? [this word]
@@ -202,7 +217,7 @@
   2. `transitions` := A mapping of labels to states from the new state."
 
    ([final transitions]
-    (MaFsaState. (atom final) (atom transitions)))
+    (MaFsaState. final transitions))
 
    ([final]
     (ma-fsa-state final {}))
@@ -221,10 +236,10 @@
 
   ([dictionary sorted]
    (let [dictionary (if-not sorted (sort dictionary) dictionary)
-         previous-word (atom "")
+         previous-word ""
          start-state (ma-fsa-state)
-         unchecked-states (atom '())
-         minimized-states (atom #{})
+         unchecked-states '()
+         minimized-states #{}
          dawg (MaFsa.
                 previous-word start-state unchecked-states minimized-states)]
      (finish!
