@@ -18,6 +18,28 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
+;; TODO: Implement the deletion of words from the DFA.  This can be done in the
+;; following fashion:
+;;
+;;   Transition along the DFA until the final state is encountered that
+;;   corresponds to the last character of the word being deleted.  If it has no
+;;   outgoing edges, delete it and all those backtracked to the root, until
+;;   either another final state is encountered (for a substring) or a state
+;;   having two or more outgoing edges is found.  In either case, stop the
+;;   deletion but remove the label corresponding to the character of the deleted
+;;   word from the state's list of outgoing edges.  In case the algorithm is
+;;   able to backtrack to the root, delete the label corresponding to the first
+;;   character of the deleted word from the list of outgoing edges from the
+;;   root, but do not delete the root.  
+
+;; TODO: Implement a method by which new terms may be inserted into the DFA in
+;; an online fashion.
+
+;; TODO: Implement a method by which a term may be updated, efficiently.  Rather
+;; than deleting the old term and inserting the updated one, find their longest
+;; common prefix, and delete everything from the old term from there; likewise,
+;; insert everything corresponding to the new term, beginning at that state. 
+
 ;; # Minimal Acyclic Finite-State Automata (MA-FSA)
 ;; A minimal acyclic finite-state automaton (MA-FSA), otherwise known in
 ;; Information Retrieval, Natural Language Processing, and related fields as a
@@ -139,6 +161,9 @@
 
 (defprotocol IMaFsa
 
+  (start-state [this]
+               "The start-state of this MA-FSA")
+
   (insert [this word]
           "Inserts a new word into this MA-FSA.")
 
@@ -162,6 +187,9 @@
                 ^:unsynchronized-mutable minimized-states]
 
   IMaFsa
+
+  (start-state [this]
+    start-state)
 
   (insert [this word]
     (let [lower-bound (longest-common-prefix-length word previous-word)
