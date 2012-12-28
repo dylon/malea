@@ -22,6 +22,6 @@
 
 (def ^:dynamic *dictionary*
   (with-open [istream (clojure.java.io/reader "/usr/share/dict/american-english")]
-    (apply vector
+    (vec 
       (line-seq istream))))
 

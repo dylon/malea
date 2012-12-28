@@ -25,20 +25,6 @@
         midje.sweet)
   (:require malea.ma-fsa))
 
-;(prn (transducer-from-list '()))
-;(prn (transducer-from-list '() true))
-;(prn (transducer-from-list '() false))
-;(prn (transducer-from-list '() true STANDARD))
-;(prn (transducer-from-list '() true TRANSPOSITION))
-;(prn (transducer-from-list '() true MERGE-AND-SPLIT))
-;(prn (transducer-from-list '() false STANDARD))
-;(prn (transducer-from-list '() false TRANSPOSITION))
-;(prn (transducer-from-list '() false MERGE-AND-SPLIT))
-;(prn (transducer (malea.ma-fsa/ma-fsa '())))
-;(prn (transducer (malea.ma-fsa/ma-fsa '()) STANDARD))
-;(prn (transducer (malea.ma-fsa/ma-fsa '()) TRANSPOSITION))
-;(prn (transducer (malea.ma-fsa/ma-fsa '()) MERGE-AND-SPLIT))
-
 (defmacro some? [predicate collection]
   `(not (nil? (some ~predicate ~collection))))
 
@@ -49,19 +35,9 @@
     ;(fact
       ;(some? #{["" 0]} (transduce "")) => true)))
 
-(let [dictionary '("bar"
-                   "baz"
-                   "corge"
-                   "foo"
-                   "fred"
-                   "garply"
-                   "grault"
-                   "plugh"
-                   "quux"
-                   "qux"
-                   "thud"
-                   "waldo"
-                   "xyzzy")]
+(let [dictionary '("bar" "baz" "corge" "foo" "fred" "garply" "grault" "plugh"
+                     "quux" "qux" "thud" "waldo" "xyzzy")]
+
   (let [transduce (transducer-from-list dictionary true STANDARD)]
     (fact
       (empty? (transduce "f" 0)) => true)
@@ -74,14 +50,19 @@
       (= #{["foo" 2] ["fred" 3] ["bar" 3] ["baz" 3] ["qux" 3]}
          (set (transduce "f" 3))) => true)
     (fact
-      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4] ["thud" 4]}
+      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3]
+           ["qux" 3] ["quux" 4] ["thud" 4]}
          (set (transduce "f" 4))) => true)
     (fact
-      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4] ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5]}
+      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4]
+           ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5]}
          (set (transduce "f" 5))) => true)
     (fact
-      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4] ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5] ["garply" 6] ["grault" 6]}
+      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4]
+           ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5]
+           ["garply" 6] ["grault" 6]}
          (set (transduce "f" 6))) => true))
+
   (let [transduce (transducer-from-list dictionary true TRANSPOSITION)]
     (fact
       (empty? (transduce "f" 0)) => true)
@@ -94,29 +75,38 @@
       (= #{["foo" 2] ["fred" 3] ["bar" 3] ["baz" 3] ["qux" 3]}
          (set (transduce "f" 3))) => true)
     (fact
-      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4] ["thud" 4]}
+      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3]
+           ["qux" 3] ["quux" 4] ["thud" 4]}
          (set (transduce "f" 4))) => true)
     (fact
-      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4] ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5]}
+      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4]
+           ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5]}
          (set (transduce "f" 5))) => true)
     (fact
-      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4] ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5] ["garply" 6] ["grault" 6]}
+      (= #{["foo" 2] ["bar" 3] ["baz" 3] ["fred" 3] ["qux" 3] ["quux" 4]
+           ["thud" 4] ["corge" 5] ["plugh" 5] ["waldo" 5] ["xyzzy" 5]
+           ["garply" 6] ["grault" 6]}
          (set (transduce "f" 6))) => true))
+
   (let [transduce (transducer-from-list dictionary true MERGE-AND-SPLIT)]
     (fact
       (empty? (transduce "f" 0)) => true)
     (fact
       (empty? (transduce "f" 1)) => true)
     (fact
-      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux"]}
+      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2]}
          (set (transduce "f" 2))) => true)
     (fact
-      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2] ["fred" 3] ["quux" 3] ["thud" 3]}
+      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2]
+           ["fred" 3] ["quux" 3] ["thud" 3]}
          (set (transduce "f" 3))) => true)
     (fact
-      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2] ["fred" 3] ["quux" 3] ["thud" 3] ["corge" 4] ["plugh" 4] ["waldo" 4] ["xyzzy" 4]}
+      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2] ["fred" 3] ["quux" 3]
+           ["thud" 3] ["corge" 4] ["plugh" 4] ["waldo" 4] ["xyzzy" 4]}
          (set (transduce "f" 4))) => true)
     (fact
-      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2] ["fred" 3] ["quux" 3] ["thud" 3] ["corge" 4] ["plugh" 4] ["waldo" 4] ["xyzzy" 4] ["garply" 5] ["grault" 5]}
+      (= #{["bar" 2] ["baz" 2] ["foo" 2] ["qux" 2] ["fred" 3] ["quux" 3]
+           ["thud" 3] ["corge" 4] ["plugh" 4] ["waldo" 4] ["xyzzy" 4]
+           ["garply" 5] ["grault" 5]}
          (set (transduce "f" 5))) => true)))
 
