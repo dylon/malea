@@ -18,39 +18,206 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(ns malea.levenshtein
-  (:require malea.ma-fsa))
+;; ## Introduction
+;;
+;; The algorithm for imitating Levenshtein automata was taken from the following
+;; journal article:
+;; 
+;;     \@ARTICLE{Schulz02faststring,
+;;         author = {Klaus Schulz and Stoyan Mihov},
+;;         title = {Fast String Correction
+;;                  with Levenshtein-Automata},
+;;         journal = {INTERNATIONAL JOURNAL OF DOCUMENT
+;;                    ANALYSIS AND RECOGNITION},
+;;         year = {2002},
+;;         volume = {5},
+;;         pages = {67--85}
+;;     }
+;; 
+;; As well, this Master Thesis helped me understand its concepts:
+;; 
+;;   * www.fmi.uni-sofia.bg/fmi/logic/theses/mitankin-en.pdf
+;; 
+;; The supervisor of the student who submitted the thesis was one of the
+;; authors of the journal article, above.
+;; 
+;; The algorithm for constructing a DAWG (Direct Acyclic Word Graph) from the
+;; input dictionary of words (DAWGs are otherwise known as an MA-FSA, or Minimal
+;; Acyclic Finite-State Automata), was taken and modified from the following
+;; blog from Steve Hanov:
+;; 
+;;   * http://stevehanov.ca/blog/index.php?id=115
+;; 
+;; The algorithm therein was taken from the following paper:
+;; 
+;;     \@MISC{Daciuk00incrementalconstruction,
+;;       author = {Jan Daciuk
+;;                 and Bruce W. Watson
+;;                 and Richard E. Watson
+;;                 and Stoyan Mihov},
+;;       title = {Incremental Construction of Minimal
+;;                Acyclic Finite-State Automata},
+;;       year = {2000}
+;;     }
 
-(def ^:const STANDARD        2r01)
-(def ^:const TRANSPOSITION   2r10)
+(ns malea.levenshtein
+  (:require [malea.ma-fsa :as ma-fsa]))
+
+;; Levenshtein distance, including insertions, deletions, and substitutions as
+;; elementary edit operations. This is the traditional edit distance metric.
+(def ^:const STANDARD 2r01)
+
+;; Levenshtein distance, including insertions, deletions, substitutions, and
+;; transpositions as elementary edit operations. This is useful, primarily, in
+;; typesetting applications.
+(def ^:const TRANSPOSITION 2r10)
+
+;; Levenshtein distance, including insertions, deletions, substitutions, merges,
+;; and splits as elementary edit operations. This is useful, primarily, in OCR
+;; applications.
 (def ^:const MERGE-AND-SPLIT 2r11)
 
+;; For a given vector collection, returns the element of `collection` at `index`
+;; if `index` is bounded by the vector's length.  Otherwise, `nil` is returned.   
 (defn get-nth [collection index]
   (if-not (< index (count collection)) nil
     (nth collection index)))
 
+;; Syntactic sugar for negating a while loop.  Example usage:
+;;
+;;     (while-not predicate?
+;;       (expression-1)
+;;       (expression-2)
+;;       ...)
 (defmacro while-not [predicate? & expressions]
   `(while (not ~predicate?)
      ~@expressions))
 
+;; If `value` is non-zero, return it.  Otherwise, return `nil` for a falsy
+;; value (this is useful for disjunctions and is inspired by Ruby's `nonzero?`
+;; function).
 (defn nonzero? [value]
   (if (zero? value) nil value))
 
+;; Inserts `value` into `collection` at `index`.
 (defn insert [collection value index]
   (concat (take index collection)
           (cons value (drop index collection))))
 
+;; Drops the element at `index` from `collection`. 
 (defn drop-index [collection index]
   (concat (take index collection)
           (drop (inc index) collection)))
 
-(definline abs-int [value]
+;; Returns the absolute value of `value`.
+(definline abs [value]
   `(if (neg? ~value) (- ~value) ~value))
 
+;; For a given `state` and word length `w`, determine the minimum edit distance
+;; of that `state`.
 (defmacro ->distance [state w]
    `(let [[i# e#] ~state]
       (+ e# (- ~w i#))))
 
+;; ## ILevenshteinTransducer
+;;
+;; Protocol which must be implemented by every Levenshtein Transducer.
+;;
+;; ### (dictionary [this])
+;;
+;; DFA dictionary containing the terms that may be queried against.
+;;
+;; ### (index-of [this characteristic-vector k i])
+;;
+;; Returns the first index corresponding to a `true` value within the
+;; characteristic vector, beginning at offset `i` and ending at `i + k`.  The
+;; index begins at `0` for `i`, and ends at `k` for `i + k`.  If no element
+;; corresponds to a `true` value within the range `i` to `i + k`, the value `-1`
+;; is returned.
+;;    
+;; 1. `characteristic-vector` Vector of booleans corresponding to the characters
+;; within the query term -- at the given offset `i` of the given length
+;; `i + k` -- that match the edge-label of interest.
+;; 2. `k` Number of elements to examine.
+;; 3. `i` Offset of where to begin traversing the characteristic vector,
+;; which must be no greater than k.
+;;
+;; ### (bisect-error-right [this state e l])
+;;
+;; Given two positions `[i,e]` and `[j,f]`, for `[i,e]` to subsume `[j,f]`, it
+;; must be the case that `e < f`.  Therefore, I can remove a redundant check
+;; for `e < f` within the `subsumes?` method by finding the first index that
+;; contains a position having an error greater than the current one (assuming
+;; that the positions are sorted in ascending order, according to error).
+;;
+;; ### (transition-for-position [this n])
+;;
+;; Returns a position transition function, which maps positions into states
+;; according to the specified algorithm.
+;;   
+;; 1. `n` Maximum allowed edit distance.
+;;   
+;; A position transition function of the following signature is returned; it is
+;; the heart of its respective algorithm:
+;;   
+;;     (fn [position characteristic-vector offset])
+;;
+;; The first parameter corresponds to the current position, the second
+;; corresponds to a characteristic vector at the minimal boundary of the current
+;; state, and the third is the offset with which to relabel the boundary of the
+;; current position.
+;;
+;; ### (subsumes? [this i,e j,f] [this i,e,s j,f,t n] [this i,e,s j,f,t])
+;;
+;; Accepts the parameters of two positions, and determines whether the first
+;; subsumes the second.
+;;  
+;; Within each algorithm-specific implementation, you will notice that I have
+;; left off the essential check for (< e f).  I have derived an algorithm that
+;; ensures the constraint is enforced, and I therefore do not need to check that
+;; it is so.  For more details, please see my comments about
+;; `bisect-error-right` and how I am using it in `unsubsume-for`.
+;;
+;; ### (unsubsume-for [this n])
+;;
+;; Returns a function that removes all the subsumed positions (unsubsumes) from
+;; a state vector.  It is necessary that the state vector has had its positions
+;; sorted in a particular fashion, as defined within `insert-for-subsumption`.
+;;
+;; TODO: Experiment with whether it is faster to perform a linear scan rather
+;; than invoking a method call, to find the value for `n`.
+;;
+;; ### (insert-for-subsumption [this state' next-state])
+;;
+;; Insertion-sort according to error first, then boundary (both ascending).
+;; While sorting the elements, remove any duplicates.
+;;
+;; ### (minimum-distance [this state w])
+;;
+;; The distance of each position in a state can be defined as follows, where `w`
+;; is the length of the query term, `i` is the boundary of the current position,
+;; and `e` is the current position's error:
+;;
+;;     distance = w - i + e
+;;
+;; It is characteristic of the generated states that `i <= w`.  Therefore,
+;; `w - i` provides the number of characters remaining to be inserted before the
+;; two terms are of equal lengths.  Because each insertion has a weight of `1`,
+;; the number of characters remaining increases the position's current error by
+;; the same number (of characters remaining).  This is the intuition behind how
+;; I derived the cumulative error of the position of interest.
+;;
+;; For every accepting position, it must be the case that `w - i <= n - e`,
+;; where `n` is the maximum allowed edit distance.  It follows directly that the
+;; distance of every accepted position must be no more than `n`:
+;;
+;;     (w - i <= n - e) <=> (w - i + e <= n) <=> (distance <= n)
+;;
+;; The Levenshtein distance between any two terms is defined as the minimum edit
+;; distance between them.  Therefore, iterate over each position in an accepting
+;; state, and take the minimum distance among all its accepting positions as the
+;; corresponding Levenshtein distance.  This is the intuition behind how I
+;; derieved the minimum distance of the state of interest.
 (defprotocol ILevenshteinTransducer
   (dictionary [this])
   (index-of [this characteristic-vector k i])
@@ -68,7 +235,13 @@
   (transition-for-state [this n])
   (transduce [this term n]))
 
-(defmacro ->LevenshteinTransducer [identifier & algorithm]
+;; ## (->LevenshteinTransducer [identifier & body])
+;;
+;; Adds shared methods to the `deftype` of a Levenshtein transduction algorithm.
+;;
+;; 1. `identifier` Name to supply the `deftype` for the transducer.
+;; 2. `body` Remaining implementation of the `ILevenshteinTransducer` protocol.
+(defmacro ->LevenshteinTransducer [identifier & body]
   `(deftype ~identifier [dictionary#]
      ILevenshteinTransducer
  
@@ -97,7 +270,7 @@
         (for [j# (range k#)]
           (= x# (nth term# (+ i# j#))))))
 
-     ~@algorithm
+     ~@body 
 
     (transition-for-state [this# n#]
       (let [transition# (transition-for-position this# n#)
@@ -120,7 +293,7 @@
              stack#
               (atom
                 (list
-                  ["" (malea.ma-fsa/start-state dictionary#) (start-state this#)]))]
+                  ["" (ma-fsa/start-state dictionary#) (start-state this#)]))]
          (while-not (empty? @stack#)
            (let [[V# q_D# M#] (peek @stack#)
                  i# (first (first M#))
@@ -128,14 +301,14 @@
                  b# (- w# i#)
                  k# (min a# b#)]
              (swap! stack# pop)
-             (doseq [[x# next-q_D#] (malea.ma-fsa/transitions q_D#)]
+             (doseq [[x# next-q_D#] (ma-fsa/transitions q_D#)]
                (let [characteristic-vector#
                       (characteristic-vector this# x# term# k# i#)
                      next-M# (transition# M# characteristic-vector#)]
                  (when-not (nil? next-M#)
                    (let [next-V# (str V# x#)]
                      (swap! stack# conj [next-V# next-q_D# next-M#])
-                     (when (malea.ma-fsa/final? next-q_D#)
+                     (when (ma-fsa/final? next-q_D#)
                        (let [distance# (minimum-distance this# next-M# w#)]
                          (when (<= distance# n#)
                            (swap! matches# conj [next-V# distance#]))))))))))
@@ -214,7 +387,8 @@
             (recur l k))))))
 
   (subsumes? [this i,e j,f]
-    (<= (abs-int (- j i)) (- f e)))
+    ;; (e < f) && abs(j - i) <= (f - e)
+    (<= (abs (- j i)) (- f e)))
 
   (unsubsume-for [this n]
     (fn [state]
@@ -389,12 +563,23 @@
   (subsumes? [this i,e,s j,f,t n]
     (if (= s 1)
       (if (= t 1)
+        ;; (e < f) && (i == j) 
         (= i j)
+
+        ;; (e < f == n) && (i == j) 
         (and (= f n) (= i j)))
+
       (if (= t 1)
-        (<= (+ 1 (abs-int (- j i)))
+        ;; NOTE: This is how I derived what follows:
+        ;;
+        ;;     abs(j - (i - 1)) = abs(j - i + 1) = abs(j - i) + 1
+        ;;
+        ;; (e < f) && abs(j - (i - 1)) <= (f - e)
+        (<= (+ 1 (abs (- j i)))
             (- f e))
-        (<= (abs-int (- j i))
+
+        ;; (e < f) && abs(j - i) <= (f - e)
+        (<= (abs (- j i))
             (- f e)))))
 
   (unsubsume-for [this n]
@@ -543,7 +728,8 @@
 
   (subsumes? [this i,e,s j,f,t]
     (if (and (= s 1) (= t 0)) false
-      (<= (abs-int (- j i))
+      ;; (e < f) && abs(j - i) <= (f - e)
+      (<= (abs (- j i))
           (- f e))))
 
   (unsubsume-for [this n]
@@ -617,7 +803,7 @@
 
 (defn transducer-from-list
   ([dictionary sorted algorithm]
-   (let [dfa-dictionary (malea.ma-fsa/ma-fsa dictionary sorted)]
+   (let [dfa-dictionary (ma-fsa/ma-fsa dictionary sorted)]
      (transducer dfa-dictionary algorithm)))
   ([dictionary sorted]
    (transducer-from-list dictionary sorted STANDARD))

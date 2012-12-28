@@ -50,13 +50,14 @@
 ;; dictionaries (unless one does not mind running out of memory).
 ;;
 ;; The algorithm was taken and modified from the following sources:
-;;  - Incremental Construction of Minimal Acyclic Finite-State Automata (2000)
-;;    - Jan Daciuk
-;;    - Stoyan Mihov
-;;    - Bruce W. Watson
-;;    - Richard E. Watson
-;;  - http://stevehanov.ca/blog/index.php?id=115
-;;    - Steve Hanov
+;;
+;; * Incremental Construction of Minimal Acyclic Finite-State Automata (2000)
+;;   - Jan Daciuk
+;;   - Stoyan Mihov
+;;   - Bruce W. Watson
+;;   - Richard E. Watson
+;; * http://stevehanov.ca/blog/index.php?id=115
+;;   - Steve Hanov
 
 (ns malea.ma-fsa)
 
@@ -84,9 +85,9 @@
 ;;
 ;; It maintains state using the following parameters:
 ;;
-;; 1. `:final` := Specifies whether this is an accepting state.
+;; 1. `final` Specifies whether this is an accepting state.
 ;;   - Initialized, by default, to false.
-;; 2. `:transitions` := A mapping of labels (characters) to transition states.
+;; 2. `transitions` A mapping of labels (characters) to transition states.
 ;;   - Initialized to an empty map.
 
 (defprotocol IMaFsaState
@@ -142,15 +143,15 @@
 ;; ## MA-FSA
 ;; Uses the following parameters to maintain state:
 ;;
-;; 1. `:previous-word` :=  Specifies the most recently inerserted word.
+;; 1. `previous-word`  Specifies the most recently inerserted word.
 ;;   - Initialized, by default, to the empty string.
-;; 2. `:start-state` :=  Each word that is inserted into the MA-FSA will have its
+;; 2. `start-state`  Each word that is inserted into the MA-FSA will have its
 ;; first character anchored here.
 ;;   - Initialized, by default, to an MA-FSA state having no transitions.
-;; 3. `:unchecked-states` := List of states that have not been checked for
+;; 3. `unchecked-states` List of states that have not been checked for
 ;; duplication.
 ;;   - Initialized, by default, to an empty list.
-;; 4. `:minimized-states` := Distinct states that have been checked for
+;; 4. `minimized-states` Distinct states that have been checked for
 ;; duplication.
 ;;   - Initialized, by default, to an empty set.
 ;;
@@ -241,8 +242,8 @@
 (defn ma-fsa-state
   "Constructs a new MA-FSA state according to the following parameters:
 
-  1. `final` := Whether the state is accepting.
-  2. `transitions` := A mapping of labels to states from the new state."
+  1. `final` Whether the state is accepting.
+  2. `transitions` A mapping of labels to states from the new state."
 
    ([final transitions]
     (MaFsaState. final transitions))
@@ -256,8 +257,8 @@
 (defn ma-fsa
   "Constructs a new MA-FSA according to the following parameters:
 
-  1. `dictionary` := The list of words to insert into the MA-FSA.
-  2. `sorted` := Whether `dictionary` has already been sorted.  If this is
+  1. `dictionary` The list of words to insert into the MA-FSA.
+  2. `sorted` Whether `dictionary` has already been sorted.  If this is
   `false`, then `dictionary` is sorted before the MA-FSA is constructed (this is
   to maintain the invariant that all the words are inserted in
   lexicographically-increasing order)."
