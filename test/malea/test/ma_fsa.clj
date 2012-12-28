@@ -18,87 +18,87 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-;(ns malea.test.ma-fsa
-  ;(:use malea.ma-fsa
-        ;malea.test.dictionary
-        ;midje.sweet
-        ;incanter.stats))
+(ns malea.test.ma-fsa
+  (:use malea.ma-fsa
+        malea.test.dictionary
+        midje.sweet
+        incanter.stats))
 
-;(let [state (ma-fsa-state)]
-  ;(fact
-    ;(transitions state) => {})
-  ;(fact
-    ;(final? state) => false)
-  ;(finalize! state)
-  ;(fact
-    ;(final? state) => true))
+(let [state (ma-fsa-state)]
+  (fact
+    (transitions state) => {})
+  (fact
+    (final? state) => false)
+  (finalize! state)
+  (fact
+    (final? state) => true))
 
-;(let [state (ma-fsa-state true)]
-  ;(fact
-    ;(transitions state) => {})
-  ;(fact
-    ;(final? state) => true))
+(let [state (ma-fsa-state true)]
+  (fact
+    (transitions state) => {})
+  (fact
+    (final? state) => true))
 
-;(let [start-state (ma-fsa-state)
-      ;state-1 (ma-fsa-state)
-      ;state-2 (ma-fsa-state)]
+(let [start-state (ma-fsa-state)
+      state-1 (ma-fsa-state)
+      state-2 (ma-fsa-state)]
 
-  ;(fact
-    ;(transitions start-state) => {})
-  ;(fact
-    ;(transitions state-1) => {})
-  ;(fact
-    ;(transitions state-2) => {})
+  (fact
+    (transitions start-state) => {})
+  (fact
+    (transitions state-1) => {})
+  (fact
+    (transitions state-2) => {})
 
-  ;(add-transition! start-state \a state-1)
-  ;(add-transition! start-state \b state-2)
+  (add-transition! start-state \a state-1)
+  (add-transition! start-state \b state-2)
 
-  ;(fact
-    ;(transitions start-state) => {\a state-1
-                                  ;\b state-2})
-  ;(fact
-    ;(transitions state-1) => {})
-  ;(fact
-    ;(transitions state-2) => {})
-  ;(fact
-    ;(transition start-state \a) => state-1)
-  ;(fact
-    ;(transition start-state \b) => state-2))
+  (fact
+    (transitions start-state) => {\a state-1
+                                  \b state-2})
+  (fact
+    (transitions state-1) => {})
+  (fact
+    (transitions state-2) => {})
+  (fact
+    (transition start-state \a) => state-1)
+  (fact
+    (transition start-state \b) => state-2))
 
-;(let [state-1 (ma-fsa-state)
-      ;state-2 (ma-fsa-state)
-      ;start-state (ma-fsa-state true {\y state-1
-                                      ;\z state-2})]
-  ;(fact
-    ;(transitions start-state) => {\y state-1
-                                  ;\z state-2})
-  ;(fact
-    ;(transitions state-1) => {})
-  ;(fact
-    ;(transitions state-2) => {})
-  ;(fact
-    ;(final? start-state) => true)
-  ;(fact
-    ;(final? state-1) => false)
-  ;(fact
-    ;(final? state-2) => false))
+(let [state-1 (ma-fsa-state)
+      state-2 (ma-fsa-state)
+      start-state (ma-fsa-state true {\y state-1
+                                      \z state-2})]
+  (fact
+    (transitions start-state) => {\y state-1
+                                  \z state-2})
+  (fact
+    (transitions state-1) => {})
+  (fact
+    (transitions state-2) => {})
+  (fact
+    (final? start-state) => true)
+  (fact
+    (final? state-1) => false)
+  (fact
+    (final? state-2) => false))
 
-;(let [dawg (ma-fsa '())]
-  ;(fact
-    ;(accepts? dawg "") => false))
+(let [dawg (ma-fsa '())]
+  (fact
+    (accepts? dawg "") => false))
 
-;(let [dawg (ma-fsa '(""))]
-  ;(fact
-    ;(accepts? dawg "") => true))
+(let [dawg (ma-fsa '(""))]
+  (fact
+    (accepts? dawg "") => true))
 
-;(let [sample-size 50000
-      ;dictionary (sample *dictionary* :size sample-size :replacement false)
-      ;[include-set exclude-set] (split-at (/ sample-size 2) dictionary)
-      ;dawg (ma-fsa include-set)]
-  ;(doseq [term include-set]
-    ;(fact
-      ;(accepts? dawg term) => true))
-  ;(doseq [term exclude-set]
-    ;(fact
-      ;(accepts? dawg term) => false)))
+(let [sample-size 50000
+      dictionary (sample *dictionary* :size sample-size :replacement false)
+      [include-set exclude-set] (split-at (/ sample-size 2) dictionary)
+      dawg (ma-fsa include-set)]
+  (doseq [term include-set]
+    (fact
+      (accepts? dawg term) => true))
+  (doseq [term exclude-set]
+    (fact
+      (accepts? dawg term) => false)))
 
