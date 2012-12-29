@@ -6,4 +6,5 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [incanter "1.4.1"]]
   :profiles {:dev {:dependencies [[midje "1.4.0"]]
-                   :plugins [[lein-midje "2.0.1"]]}})
+                   :plugins [[lein-midje "2.0.1"]]}}
+  :source-paths ["src/clojure/"])
