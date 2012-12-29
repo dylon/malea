@@ -1,4 +1,4 @@
-(defproject malea "0.1.0-alpha"
+(defproject malea "0.2.0"
   :description "Machine Learning for Information Retrieval and Natural Language Processing (among others)"
   :url "https://github.com/dylon/malea"
   :license {:name "The MIT License"
