@@ -32,7 +32,6 @@
   :profiles {:dev {:dependencies [[midje "1.4.0"]
                                   [ragtime/ragtime.sql.files "0.3.2"]]
                    :plugins [[lein-midje "2.0.1"]
-                             [incanter "1.4.1"]
                              [ragtime/ragtime.lein "0.3.2"]
                              [org.antlr/ST4 "4.0.4"]]
                    :ragtime {:migrations ragtime.sql.files/migrations

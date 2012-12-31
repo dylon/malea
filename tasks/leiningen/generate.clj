@@ -19,8 +19,7 @@
 ;; SOFTWARE.
 
 (ns leiningen.generate
-  (:require [leiningen.core.eval :as lein.eval]
-            [incanter.stats :as stats])
+  (:require [leiningen.core.eval :as lein.eval])
   (:import java.util.Calendar
            org.stringtemplate.v4.ST))
 
