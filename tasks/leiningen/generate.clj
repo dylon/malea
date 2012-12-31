@@ -27,14 +27,14 @@
 (def ^:private ^:const MIGRATIONS-PATH "migrations")
 (def ^:private ^:const MIGRATION-TEMPLATE "src/stringtemplate/postgresql/migration.sql.stg")
 
-(defn- ->template
+(defn ->template
   [#^String text #^java.util.Map attributes]
   (let [template (ST. text)]
     (doseq [[#^String name #^Object value] attributes]
       (.add template name value))
     (.render template)))
 
-(defn- generate-migration! [args]
+(defn generate-migration! [args]
   (require 'clojure.java.io)
   (let [migration-name (-> (clojure.string/join " " args)
                          clojure.string/trim 
