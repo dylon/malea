@@ -8,5 +8,14 @@ pom.xml
 .lein-deps-sum
 .lein-failures
 .lein-plugins
-*.swp
-*.swo
+
+# Vim swap files
+*.sw?
+
+# English Wikipedia dump
+resources/wikipedia/enwiki-latest-pages-articles.xml
+resources/opennlp/models
+
+# Graph of dependencies within the project
+malea.dot
+malea.svg

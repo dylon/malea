@@ -272,7 +272,7 @@
          dawg (MaFsa.
                 previous-word start-state unchecked-states minimized-states)]
      (finish!
-       (reduce #(insert %1 %2) dawg dictionary))))
+       (reduce insert dawg dictionary))))
 
   ([dictionary]
    (ma-fsa dictionary false)))

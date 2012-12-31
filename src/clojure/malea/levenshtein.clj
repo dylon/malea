@@ -97,7 +97,7 @@
 ;; value (this is useful for disjunctions and is inspired by Ruby's `nonzero?`
 ;; function).
 (defn nonzero? [value]
-  (if (zero? value) nil value))
+  (when-not (zero? value) value))
 
 ;; Inserts `value` into `collection` at `index`.
 (defn insert [collection value index]
