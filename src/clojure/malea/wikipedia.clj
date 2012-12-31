@@ -27,5 +27,5 @@
                                   :password nil}))
 
 (defentity pages
-  (entity-fields :title :redirect :text))
+  (entity-fields :text))
 

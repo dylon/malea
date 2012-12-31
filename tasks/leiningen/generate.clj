@@ -19,11 +19,12 @@
 ;; SOFTWARE.
 
 (ns leiningen.generate
-  (:use [incanter.stats :only (sample-uniform)]))
+  (:require [leiningen.core.eval :as lein.eval]
+            [incanter.stats :as stats]))
 
 (def ^:private ^:const migrations-path "migrations")
 
-(defn- generate! [args]
+(defn- generate-migration! [args]
   (let [migration-name (-> (clojure.string/join " " args)
                          clojure.string/trim 
                          (clojure.string/replace #"[\s_-]+" "_")
@@ -33,7 +34,8 @@
         year (.get calendar java.util.Calendar/YEAR)
         month (format "%02d" (inc (.get calendar java.util.Calendar/MONTH)))
         day (format "%02d" (.get calendar java.util.Calendar/DAY_OF_MONTH))
-        nonce (first (sample-uniform 1 :min 100000 :max 999999 :integers true))
+        nonce (first
+                (stats/sample-uniform 1 :min 100000 :max 999999 :integers true))
         prefix (str year month day nonce)]
     (doseq [direction ["up" "down"]]
       (let [filename (str prefix "_" migration-name "." direction ".sql")
@@ -45,9 +47,29 @@
             (println "Failed to generate migration:" (.getPath migration-file)))
           (println "Failed to create directory:" (.getPath migrations-dir)))))))
 
-(defn generate [project task & args]
+(defn generate [project command & args]
   "Generates various types of files [lein migration generate migration name]"
-  (case task
-    "generate" (generate! args)
-    (throw (Exception. "Expected \"task\" to be \"migration\""))))
+  (case command
+    "migration" (generate-migration! args)
+    (lein.eval/eval-in-project project
+      `(do
+         (require 'malea.levenshtein)
+         (let [command# ~command
+               transduce# (malea.levenshtein/transducer-from-list
+                            ["migration"] false malea.levenshtein/TRANSPOSITION)
+               suggestions# (->> (transduce# command#)
+                             (sort #(or
+                                      (malea.levenshtein/nonzero?
+                                        (- (last %1) (last %2)))
+                                      (compare (first %1) (first %2)))))]
+           (binding [*out* *err*]
+             (println (str "ERROR: Unrecognized command: \"" command# "\""))
+             (when-not (empty? suggestions#)
+               (println "Did you mean one of these?")
+               (loop [index# 1
+                      [suggestion# distance#] (first suggestions#)
+                      suggestions# (rest suggestions#)]
+                 (println (str "  " index# ". \"" suggestion# "\" (Levenshtein distance: " distance# ")"))
+                 (when-not (empty? suggestions#)
+                   (recur (inc index#) (first suggestions#) (rest suggestions#)))))))))))
 
