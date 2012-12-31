@@ -19,13 +19,53 @@
 ;; SOFTWARE.
 
 (ns malea.wikipedia
-  (:use korma.db
-        korma.core))
+  (:use korma.core)
+  (:require [malea.database :as db]))
 
-(defdb malea_wikipedia (postgres {:db "malea_wikipedia"
-                                  :user "malea"
-                                  :password nil}))
+(db/initialize!)
 
-(defentity pages
-  (entity-fields :text))
+(declare page gram_1 gram_2 gram_3 trigram bigram unigram)
+
+(defentity page
+  (table :pages)
+  (entity-fields :text)
+  (has-many trigram)
+  (has-many bigram)
+  (has-many unigram))
+
+;; Workaround for Korma: It doesn't support multiple belongs-to relationships.
+;; See: https://groups.google.com/forum/?fromgroups=#!topic/sqlkorma/asnjrVh0IYQ
+(defentity gram_1
+  (table :grams)
+  (entity-fields :value)
+  (has-many trigram))
+(defentity gram_2
+  (table :grams)
+  (entity-fields :value)
+  (has-many trigram))
+(defentity gram_3
+  (table :grams)
+  (entity-fields :value)
+  (has-many trigram))
+
+(defentity trigram
+  (table :trigrams)
+  (entity-fields :frequency)
+  (belongs-to page)
+  (belongs-to gram_1)
+  (belongs-to gram_2)
+  (belongs-to gram_3))
+
+(defentity bigram 
+  (table :bigrams)
+  (entity-fields :frequency)
+  (belongs-to page)
+  (belongs-to gram_1)
+  (belongs-to gram_2))
+
+(defentity unigram  
+  (table :unigrams)
+  (entity-fields :frequency)
+  (belongs-to page)
+  (belongs-to gram_1))
 

@@ -8,6 +8,10 @@ context-sensitive spelling correction, using a language model trained on some
 corpus I have yet to select.  It is very much in the priliminary stages of its
 life, so please do not expect it to do anything fancy yet.
 
+## Preconditions
+
+I assume you are using some variant of Linux and are a Postgres super user.
+
 ## Preparation
 
 ### Dependencies

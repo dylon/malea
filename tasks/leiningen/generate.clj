@@ -20,31 +20,45 @@
 
 (ns leiningen.generate
   (:require [leiningen.core.eval :as lein.eval]
-            [incanter.stats :as stats]))
+            [incanter.stats :as stats])
+  (:import java.util.Calendar
+           org.stringtemplate.v4.ST))
 
-(def ^:private ^:const migrations-path "migrations")
+(def ^:private ^:const MIGRATIONS-PATH "migrations")
+(def ^:private ^:const MIGRATION-TEMPLATE "src/stringtemplate/postgresql/migration.sql.stg")
+
+(defn- ->template
+  [#^String text #^java.util.Map attributes]
+  (let [template (ST. text)]
+    (doseq [[#^String name #^Object value] attributes]
+      (.add template name value))
+    (.render template)))
 
 (defn- generate-migration! [args]
+  (require 'clojure.java.io)
   (let [migration-name (-> (clojure.string/join " " args)
                          clojure.string/trim 
                          (clojure.string/replace #"[\s_-]+" "_")
                          (clojure.string/replace #"([A-Za-z0-9])([A-Z])" "$1_$2")
                          clojure.string/lower-case)
-        calendar (java.util.Calendar/getInstance)
-        year (.get calendar java.util.Calendar/YEAR)
-        month (format "%02d" (inc (.get calendar java.util.Calendar/MONTH)))
-        day (format "%02d" (.get calendar java.util.Calendar/DAY_OF_MONTH))
-        nonce (first
-                (stats/sample-uniform 1 :min 100000 :max 999999 :integers true))
-        prefix (str year month day nonce)]
+        calendar (Calendar/getInstance)
+        year (.get calendar Calendar/YEAR)
+        month (format "%02d" (inc (.get calendar Calendar/MONTH)))
+        day (format "%02d" (.get calendar Calendar/DAY_OF_MONTH))
+        hours (format "%02d" (.get calendar Calendar/HOUR_OF_DAY))
+        minutes (format "%02d" (.get calendar Calendar/MINUTE))
+        seconds (format "%02d" (.get calendar Calendar/SECOND))
+        milliseconds (format "%03d" (.get calendar Calendar/MILLISECOND))
+        prefix (str year month day hours minutes seconds milliseconds)
+        template (->template (slurp MIGRATION-TEMPLATE) {"year" year})]
     (doseq [direction ["up" "down"]]
       (let [filename (str prefix "_" migration-name "." direction ".sql")
-            migrations-dir (java.io.File. migrations-path)
-            migration-file (java.io.File. (str migrations-path "/" filename))]
+            migrations-dir (java.io.File. MIGRATIONS-PATH)
+            migration-file (java.io.File. (str MIGRATIONS-PATH "/" filename))]
         (if (or (.exists migrations-dir) (.mkdir migrations-dir))
-          (if (.createNewFile migration-file)
-            (println "Generated migration:" (.getPath migration-file))
-            (println "Failed to generate migration:" (.getPath migration-file)))
+          (with-open [ostream (clojure.java.io/writer migration-file)]
+            (.write ostream template)
+            (println "Generated migration:" (.getPath migration-file)))
           (println "Failed to create directory:" (.getPath migrations-dir)))))))
 
 (defn generate [project command & args]
