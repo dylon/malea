@@ -34,7 +34,7 @@
                    :plugins [[lein-midje "2.0.1"]
                              [incanter "1.4.1"]
                              [ragtime/ragtime.lein "0.3.2"]
-                             [org.antlr/stringtemplate "4.0.2"]]
+                             [org.antlr/ST4 "4.0.4"]]
                    :ragtime {:migrations ragtime.sql.files/migrations
                              :database "jdbc:postgresql:malea_wikipedia?user=malea"}}}
   :source-paths ["src/clojure/"])
