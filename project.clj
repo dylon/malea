@@ -27,13 +27,24 @@
                  [incanter "1.4.1"]
                  [org.clojure/data.xml "0.0.6"]
                  [clojure-opennlp "0.2.0"]
-                 [com.gfredericks/korma "0.3.0-beta11"]
-                 [postgresql "9.1-901.jdbc4"]]
-  :profiles {:dev {:dependencies [[midje "1.4.0"]
-                                  [ragtime/ragtime.sql.files "0.3.2"]]
+                 [korma "0.3.0-beta13"]
+                 [postgresql "9.1-901.jdbc4"]
+                 [org.clojure/java.jdbc "0.2.3"]
+                 [c3p0/c3p0 "0.9.1.2"]
+                 [ragtime/ragtime.sql.files "0.3.2"]
+                 [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
+                                                    javax.jms/jms
+                                                    com.sun.jdmk/jmxtools
+                                                    com.sun.jmx/jmxri]]
+                 [org.clojure/tools.logging "0.2.3"]]
+  :plugins [[ragtime/ragtime.lein "0.3.2"]]
+  :profiles {:dev {:dependencies [[midje "1.4.0"]]
                    :plugins [[lein-midje "2.0.1"]
-                             [ragtime/ragtime.lein "0.3.2"]
-                             [org.antlr/ST4 "4.0.4"]]
+                             [org.antlr/ST4 "4.0.4"]
+                             [org.clojure/tools.cli "0.2.2"]]
                    :ragtime {:migrations ragtime.sql.files/migrations
-                             :database "jdbc:postgresql:malea_wikipedia?user=malea"}}}
+                             :database "jdbc:postgresql:malea?user=malea"}}
+             :test [{:ragtime {:migrations ragtime.sql.files/migrations
+                               :database "jdbc:postgresql:malea_test?user=malea"}}
+                    :default]}
   :source-paths ["src/clojure/"])

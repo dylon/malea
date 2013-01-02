@@ -19,53 +19,158 @@
 ;; SOFTWARE.
 
 (ns malea.wikipedia
-  (:use korma.core)
-  (:require [malea.database :as db]))
+  (:use korma.core
+        clojure.pprint)
+  (:require [malea.nlp :as nlp]
+            [clojure.data.xml :as xml]))
 
-(db/initialize!)
+(defentity pages)
+(defentity grams)
+(defentity trigrams)
+(defentity bigrams)
+(defentity unigrams)
 
-(declare page gram_1 gram_2 gram_3 trigram bigram unigram)
+(defn insert-pages [records]
+  "Inserts complete, new Wikipedia pages into the database."
+  (insert pages
+    (values records)))
 
-(defentity page
-  (table :pages)
-  (entity-fields :text)
-  (has-many trigram)
-  (has-many bigram)
-  (has-many unigram))
+(defn insert-grams [records]
+  "Inserts new grams into the database.  Each gram should be a string."
+  (doseq [record records]
+    (when (empty?
+      (select grams
+        (aggregate (count :*) :singleton :value)
+        (where {:value [= (:value record)]})
+        (limit 1)))
+      (insert grams 
+        (values [record])))))
 
-;; Workaround for Korma: It doesn't support multiple belongs-to relationships.
-;; See: https://groups.google.com/forum/?fromgroups=#!topic/sqlkorma/asnjrVh0IYQ
-(defentity gram_1
-  (table :grams)
-  (entity-fields :value)
-  (has-many trigram))
-(defentity gram_2
-  (table :grams)
-  (entity-fields :value)
-  (has-many trigram))
-(defentity gram_3
-  (table :grams)
-  (entity-fields :value)
-  (has-many trigram))
+(defn insert-trigrams [records]
+  "Inserts new trigrams into the database."
+  (insert trigrams 
+    (values records)))
 
-(defentity trigram
-  (table :trigrams)
-  (entity-fields :frequency)
-  (belongs-to page)
-  (belongs-to gram_1)
-  (belongs-to gram_2)
-  (belongs-to gram_3))
+(defn insert-bigrams [records]
+  "Inserts new bigrams into the database."
+  (insert bigrams
+    (values records)))
 
-(defentity bigram 
-  (table :bigrams)
-  (entity-fields :frequency)
-  (belongs-to page)
-  (belongs-to gram_1)
-  (belongs-to gram_2))
+(defn insert-unigrams [records]
+  "Inserts new unigrams into the database."
+  (insert unigrams
+    (values records)))
 
-(defentity unigram  
-  (table :unigrams)
-  (entity-fields :frequency)
-  (belongs-to page)
-  (belongs-to gram_1))
+(defn gram-map [values]
+  "Bijection of gram-text onto gram-id from the database."
+  (->> (select grams
+          (fields :id :value)
+          (where {:value [in values]}))
+    (reduce
+      #(assoc %1 (:value %2) (:id %2)) {})))
+
+(defn trigrams-for-page [^long page-id]
+  "Trigrams for the given page."
+  (-> (select* trigrams)
+    (where {:page_id page-id})))
+
+(defn bigrams-for-page [^long page-id]
+  "Bigrams for the given page."
+  (-> (select* bigrams)
+    (where {:page_id page-id})))
+
+(defn unigrams-for-page [^long page-id]
+  "Unigrams for the given page."
+  (-> (select* unigrams)
+    (where {:page_id page-id})))
+
+(defn- filter-tag [tag xml]
+  (filter #(= tag (:tag %)) xml))
+
+;; TODO: Strip all HTML tags from the documents.  This may be able to go into
+;; `malea.nlp/preprocess`.
+
+;; The original XML-parsing algorithm came from here: 
+;; http://stackoverflow.com/a/9993325/206543
+
+(defn n-gram [page-id frequency records attributes]
+  (loop [index 0
+         n-gram {}]
+    (if-not (< index (count attributes))
+      (conj records
+        (assoc n-gram
+          :page_id page-id
+          :frequency (frequency attributes))) 
+      (recur
+        (inc index)
+        (assoc n-gram
+          (keyword (str "gram_" (inc index) "_id"))
+          (nth attributes index))))))
+
+(defn- insert-page-from-xml [{page-id :id, page-text :text}]
+  (let [preprocessed-text (nlp/preprocess page-text)
+        sentences (nlp/get-sentences preprocessed-text)
+        tokens (map nlp/tokenize sentences)
+        distinct-tokens (distinct (flatten tokens))
+        trigrams (apply concat (map nlp/trigrams tokens))
+        bigrams  (apply concat (map nlp/bigrams tokens))
+        unigrams (apply concat (map nlp/unigrams tokens))]
+
+    (insert-pages [{:id page-id, :text page-text}])
+    (insert-grams (map #(hash-map :value %) distinct-tokens))
+    
+    (let [gram-map (gram-map distinct-tokens)
+          trigram-ids (map #(vec (map gram-map %)) trigrams)
+          bigram-ids  (map #(vec (map gram-map %)) bigrams)
+          unigram-ids (map #(vec (map gram-map %)) unigrams)
+          trigram-frequency (nlp/frequency trigram-ids)
+          bigram-frequency  (nlp/frequency bigram-ids)
+          unigram-frequency (nlp/frequency unigram-ids)
+          trigram-records
+            (reduce
+              (partial n-gram page-id trigram-frequency)
+              [] (distinct trigram-ids))
+          bigram-records
+            (reduce
+              (partial n-gram page-id bigram-frequency)
+              [] (distinct bigram-ids))
+          unigram-records
+            (reduce
+              (partial n-gram page-id unigram-frequency)
+              [] (distinct unigram-ids))]
+      
+      (insert-trigrams trigram-records)
+      (insert-bigrams  bigram-records)
+      (insert-unigrams unigram-records))))
+
+(defn- process-text-element [attributes text-element]
+  (let [page-text (first (:content text-element))
+        attributes (assoc attributes :text page-text)]
+    (insert-page-from-xml attributes)))
+
+(defn- process-revision-element [attributes revision-element]
+  (dorun (->> (:content revision-element)
+    (filter #(= :text (:tag %)))
+    (map (partial process-text-element attributes)))))
+
+(defn- extract-page-id [page-element]
+  (read-string
+    (first
+      (:content
+        (first
+          (filter
+            #(= :id (:tag %))
+            (:content page-element)))))))
+
+(defn- process-page-element [attributes page-element]
+  (let [page-id (extract-page-id page-element)
+        attributes (assoc attributes :id page-id)]
+    (dorun (->> (:content page-element)
+      (filter #(= :revision (:tag %)))
+      (map (partial process-revision-element attributes))))))
+
+(defn insert-pages-from-xml [xml-input-stream]
+  (dorun (->> (:content (xml/parse xml-input-stream :coalescing false))
+    (filter #(= :page (:tag %)))
+    (map (partial process-page-element {})))))
 

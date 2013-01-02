@@ -27,26 +27,38 @@ $ lein deps
 This project is configured under the assumption that Postgres is being run
 locally and is listening to the default port (5432).
 
-Create the database and `malea` user:
+Create the `malea` and `malea_test` databases, and the
+`malea` user:
 
 ```
-$ createdb malea_wikipedia -E UTF8
 $ createuser malea
-$ psql -d malea_wikipedia
+$ createdb malea -E UTF8
+$ psql -d malea
 psql (9.2.2)
 Type "help" for help.
 
-malea_wikipedia=# REVOKE connect ON DATABASE malea_wikipedia FROM PUBLIC;
+malea=# REVOKE connect ON DATABASE malea FROM PUBLIC;
 REVOKE
-malea_wikipedia=# GRANT connect ON DATABASE malea_wikipedia TO malea;
+malea=# GRANT connect ON DATABASE malea TO malea;
 GRANT
-malea_wikipedia=> \q
+malea=> \q
+$ createdb malea_test -E UTF8
+$ psql -d malea_test
+psql (9.2.2)
+Type "help" for help.
+
+malea_test=# REVOKE connect ON DATABASE malea_test FROM PUBLIC;
+REVOKE
+malea_test=# GRANT connect ON DATABASE malea_test TO malea;
+GRANT
+malea_test=> \q
 ```
 
 Run the migrations:
 
 ```
 $ lein ragtime migrate
+$ lein with-profile test ragtime migrate
 ```
 
 ### Wikipedia
@@ -54,7 +66,7 @@ $ lein ragtime migrate
 Download the latest English Wikipedia dump:
 
 ```
-$ wget -c http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2 -O resources/wikipedia/enwiki-latest-pages-articles.xml.bz2
+$ wget -c http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2 -P resources/wikipedia/
 $ cd resources/wikipedia/
 $ bunzip2 enwiki-latest-pages-articles.xml.bz2
 $ cd -
@@ -66,9 +78,9 @@ Download the English-based, OpenNLP models from the following locations, and
 place them into `resources/opennlp/models/`:
 
 1. [Tokenizer](http://opennlp.sourceforge.net/models-1.5/en-token.bin "Trained on opennlp training data.")
-	- `$ wget -c http://opennlp.sourceforge.net/models-1.5/en-token.bin -O resources/opennlp/models/en-token.bin`
+	- `$ wget -c http://opennlp.sourceforge.net/models-1.5/en-token.bin -P resources/opennlp/models/`
 2. [Sentence Detector](http://opennlp.sourceforge.net/models-1.5/en-sent.bin "Trained on opennlp training data.")
-	- `$ wget -c http://opennlp.sourceforge.net/models-1.5/en-sent.bin -O resources/opennlp/models/en-sent.bin`
+	- `$ wget -c http://opennlp.sourceforge.net/models-1.5/en-sent.bin -P resources/opennlp/models/`
 
 ## Usage
 
@@ -88,7 +100,51 @@ To use the [MA-FSA](malea/blob/master/src/malea/ma_fsa.clj):
 You may run the tests via:
 
 ```
-$ lein midje
+$ lein with-profile test midje
+```
+
+## Auxiliary
+
+### Generate Task
+
+Included is a Leiningen task to generat various types of files.
+
+#### Migration
+
+Generates a new migration, joining all parameters, after the command, into a
+single name:
+
+```
+$ lein generate migration create bigrams
+Generated migration: migrations/20121231153012135_create_bigrams.up.sql
+Generated migration: migrations/20121231153012135_create_bigrams.down.sql
+```
+
+#### Source
+
+Generates a new source file, scoped according to the `malea` namespace, and a
+corresponding test file (unless specified otherwise):
+
+```
+$ lein generate source wikipedia
+Generated source file: src/clojure/malea/wikipedia.clj
+Generated test file: test/malea/test/wikipedia.clj
+```
+
+If you only want to create a source file (without a corresponding test file):
+
+```
+$ lein generate source --no-test baz
+Generated source file: src/clojure/malea/baz.clj
+```
+
+#### Test
+
+Generates a new test file, scoped according to the `malea` namespace:
+
+```
+$ lein generate test foo bar
+Generated test file: test/malea/test/foo/bar.clj
 ```
 
 ## License

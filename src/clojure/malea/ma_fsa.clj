@@ -75,9 +75,6 @@
         index
         (recur (inc index))))))
 
-(defmacro let! [atomic-value new-value]
-  `(compare-and-set! ~atomic-value @~atomic-value ~new-value))
-
 ;; ## MA-FSA State
 ;; The state of a minimal acyclic finite-state automaton.  It has a list of
 ;; transitions to other states.  States are equivalent if they have identical

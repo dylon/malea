@@ -19,16 +19,51 @@
 ;; SOFTWARE.
 
 (ns malea.database
-  (:use korma.db))
+  (:require korma.db)
+  (:import com.mchange.v2.c3p0.ComboPooledDataSource))
 
-(def initialize!
-  (let [initialized? (ref false)]
-    (fn []
-      (when-not @initialized?
-        (dosync
-          (defdb malea_wikipedia
-                 (postgres {:db "malea_wikipedia"
-                            :user "malea"
-                            :password nil}))
-          (ref-set initialized? true))))))
+(defn pool [{:keys [classname subprotocol subname user password]}]
+  (let [datasource 
+          (doto (ComboPooledDataSource.)
+            (.setDriverClass classname)
+            (.setJdbcUrl (str "jdbc:"subprotocol":"subname))
+            (.setUser user)
+            (.setPassword password)
+            ;; expire excess connections after 30 minutes of inactivity:
+            (.setMaxIdleTimeExcessConnections (* 30 60))
+            ;; expire connections after 3 hours of inactivity:
+            (.setMaxIdleTime (* 3 30 60)))]
+    {:datasource datasource}))
+
+(defmacro ->SpecifyDatabase [^String db-name]
+  (let [db-identifier
+          (clojure.string/replace db-name \_ \-)
+        db-spec
+          (symbol (str db-identifier "-db-spec"))
+        pooled-db
+          (symbol (str "pooled-" db-identifier "-db"))
+        db-connection
+          (symbol (str db-identifier "-db-connection"))
+        establish-db-connection
+          (symbol (str "establish-" db-identifier "-db-connection!"))]
+    `(do
+       (def ~db-spec
+         {:classname "org.postgresql.Driver"
+          :subprotocol "postgresql"
+          :subname ~(str "//127.0.0.1:5432/" db-name)
+          :user "malea"})
+       (def ~pooled-db
+         (delay
+            (korma.db/default-connection
+              (pool ~db-spec))))
+       (defn ~db-connection []
+         (deref ~pooled-db))
+       (defn ~establish-db-connection []
+         "Syntactic sugar to make one's intentions clear when initializing the
+         database."
+         (~db-connection))
+       nil)))
+
+(->SpecifyDatabase "malea")
+(->SpecifyDatabase "malea_test")
 

@@ -19,10 +19,11 @@
 -- SOFTWARE.
 
 CREATE TABLE IF NOT EXISTS unigrams (
+	id serial PRIMARY KEY,
 	page_id integer NOT NULL REFERENCES pages (id) ON DELETE CASCADE,
 	gram_1_id integer REFERENCES grams (id) ON DELETE CASCADE,
 	frequency integer NOT NULL DEFAULT 0 CHECK (frequency >= 0),
-	PRIMARY KEY (page_id, gram_1_id)
+	UNIQUE (page_id, gram_1_id)
 );
 
 DROP INDEX IF EXISTS index_unigrams_on_page_id;
