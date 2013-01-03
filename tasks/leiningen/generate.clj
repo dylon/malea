@@ -164,5 +164,6 @@
                       suggestions# (rest suggestions#)]
                  (println (str "  " index# ". \"" suggestion# "\" (Levenshtein distance: " distance# ")"))
                  (when-not (empty? suggestions#)
-                   (recur (inc index#) (first suggestions#) (rest suggestions#)))))))))))
+                   (recur (inc index#) (first suggestions#) (rest suggestions#)))))))
+         nil))))
 
