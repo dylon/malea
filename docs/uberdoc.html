@@ -3028,8 +3028,72 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>malea -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">malea</h1><h2 class="project-version">0.1.0-alpha</h2><br /><p>Machine Learning for Information Retrieval and Natural Language Processing (among others)</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.4.0</td></tr><tr><td class="dep-name">incanter</td><td class="dotted"><hr /></td><td class="dep-version">1.4.1</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#malea.levenshtein">malea.levenshtein</a></li><li><a href="#malea.ma-fsa">malea.ma-fsa</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#malea.levenshtein" name="malea.levenshtein"><h1 class="project-name">malea.levenshtein</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Copyright (c) 2012 Dylon Edwards</p>
+</script><title>malea -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">malea</h1><h2 class="project-version">0.2.0</h2><br /><p>Machine Learning for Information Retrieval and Natural Language Processing (among others)</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.4.0</td></tr><tr><td class="dep-name">incanter</td><td class="dotted"><hr /></td><td class="dep-version">1.4.1</td></tr><tr><td class="dep-name">org.clojure/data.xml</td><td class="dotted"><hr /></td><td class="dep-version">0.0.6</td></tr><tr><td class="dep-name">clojure-opennlp</td><td class="dotted"><hr /></td><td class="dep-version">0.2.0</td></tr><tr><td class="dep-name">korma</td><td class="dotted"><hr /></td><td class="dep-version">0.3.0-beta13</td></tr><tr><td class="dep-name">postgresql</td><td class="dotted"><hr /></td><td class="dep-version">9.1-901.jdbc4</td></tr><tr><td class="dep-name">org.clojure/java.jdbc</td><td class="dotted"><hr /></td><td class="dep-version">0.2.3</td></tr><tr><td class="dep-name">c3p0/c3p0</td><td class="dotted"><hr /></td><td class="dep-version">0.9.1.2</td></tr><tr><td class="dep-name">ragtime/ragtime.sql.files</td><td class="dotted"><hr /></td><td class="dep-version">0.3.2</td></tr><tr><td class="dep-name">log4j/log4j</td><td class="dotted"><hr /></td><td class="dep-version">1.2.17</td></tr><tr><td class="dep-name">org.clojure/tools.logging</td><td class="dotted"><hr /></td><td class="dep-version">0.2.3</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#malea.database">malea.database</a></li><li><a href="#malea.levenshtein">malea.levenshtein</a></li><li><a href="#malea.ma-fsa">malea.ma-fsa</a></li><li><a href="#malea.nlp">malea.nlp</a></li><li><a href="#malea.persistent-heap">malea.persistent-heap</a></li><li><a href="#malea.wikipedia">malea.wikipedia</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#malea.database" name="malea.database"><h1 class="project-name">malea.database</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Copyright (c) 2012 Dylon Edwards</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns malea.database
+  (:require korma.db)
+  (:import com.mchange.v2.c3p0.ComboPooledDataSource))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn pool [{:keys [classname subprotocol subname user password]}]
+  (let [datasource 
+          (doto (ComboPooledDataSource.)
+            (.setDriverClass classname)
+            (.setJdbcUrl (str &quot;jdbc:&quot;subprotocol&quot;:&quot;subname))
+            (.setUser user)
+            (.setPassword password)
+            ;; expire excess connections after 30 minutes of inactivity:
+            (.setMaxIdleTimeExcessConnections (* 30 60))
+            ;; expire connections after 3 hours of inactivity:
+            (.setMaxIdleTime (* 3 30 60)))]
+    {:datasource datasource}))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defmacro -&gt;SpecifyDatabase [^String db-name]
+  (let [db-identifier
+          (clojure.string/replace db-name \_ \-)
+        db-spec
+          (symbol (str db-identifier &quot;-db-spec&quot;))
+        pooled-db
+          (symbol (str &quot;pooled-&quot; db-identifier &quot;-db&quot;))
+        db-connection
+          (symbol (str db-identifier &quot;-db-connection&quot;))
+        establish-db-connection
+          (symbol (str &quot;establish-&quot; db-identifier &quot;-db-connection!&quot;))]
+    `(do
+       (def ~db-spec
+         {:classname &quot;org.postgresql.Driver&quot;
+          :subprotocol &quot;postgresql&quot;
+          :subname ~(str &quot;//127.0.0.1:5432/&quot; db-name)
+          :user &quot;malea&quot;})
+       (def ~pooled-db
+         (delay
+            (korma.db/default-connection
+              (pool ~db-spec))))
+       (defn ~db-connection []
+         (deref ~pooled-db))
+       (defn ~establish-db-connection []
+         &quot;Syntactic sugar to make one's intentions clear when initializing the
+         database.&quot;
+         (~db-connection))
+       nil)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(-&gt;SpecifyDatabase &quot;malea&quot;)
+(-&gt;SpecifyDatabase &quot;malea_test&quot;)</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#malea.levenshtein" name="malea.levenshtein"><h1 class="project-name">malea.levenshtein</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Copyright (c) 2012 Dylon Edwards</p>
 
 <p>Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -3122,7 +3186,7 @@ if <code>index</code> is bounded by the vector's length.  Otherwise, <code>nil</
 value (this is useful for disjunctions and is inspired by Ruby's <code>nonzero?</code>
 function).</p>
 </td><td class="codes"><pre class="brush: clojure">(defn nonzero? [value]
-  (if (zero? value) nil value))</pre></td></tr><tr><td class="docs"><p>Inserts <code>value</code> into <code>collection</code> at <code>index</code>.</p>
+  (when-not (zero? value) value))</pre></td></tr><tr><td class="docs"><p>Inserts <code>value</code> into <code>collection</code> at <code>index</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn insert [collection value index]
   (concat (take index collection)
           (cons value (drop index collection))))</pre></td></tr><tr><td class="docs"><p>Drops the element at <code>index</code> from <code>collection</code>. </p>
@@ -3883,9 +3947,7 @@ dictionaries (unless one does not mind running out of memory).</p>
           (= (nth word-1 index)
              (nth word-2 index)))
         index
-        (recur (inc index))))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defmacro let! [atomic-value new-value]
-  `(compare-and-set! ~atomic-value @~atomic-value ~new-value))</pre></td></tr><tr><td class="docs"><h2>MA-FSA State</h2>
+        (recur (inc index))))))</pre></td></tr><tr><td class="docs"><h2>MA-FSA State</h2>
 
 <p>The state of a minimal acyclic finite-state automaton.  It has a list of
 transitions to other states.  States are equivalent if they have identical
@@ -4051,7 +4113,353 @@ lexicographically-increasing order).</li>
          dawg (MaFsa.
                 previous-word start-state unchecked-states minimized-states)]
      (finish!
-       (reduce #(insert %1 %2) dawg dictionary))))
+       (reduce insert dawg dictionary))))
   ([dictionary]
-   (ma-fsa dictionary false)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+   (ma-fsa dictionary false)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#malea.nlp" name="malea.nlp"><h1 class="project-name">malea.nlp</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Copyright (c) 2013 Dylon Edwards</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns malea.nlp
+  (:require [opennlp.nlp :as nlp]))</pre></td></tr><tr><td class="docs"><p>Extracts the natural language sentences from a body of text.</p>
+</td><td class="codes"><pre class="brush: clojure">(def get-sentences
+  (nlp/make-sentence-detector
+    (clojure.java.io/resource &quot;opennlp/models/en-sent.bin&quot;)))</pre></td></tr><tr><td class="docs"><p>Tokenizes a natural language string into grams.</p>
+</td><td class="codes"><pre class="brush: clojure">(def tokenize
+  (nlp/make-tokenizer
+    (clojure.java.io/resource &quot;opennlp/models/en-token.bin&quot;)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- rotate-onto-trigram [trigram gram]
+  &quot;Shifts the existing elements of the trigram one index to the left, discards
+  the previously first element, and associates the last index with the new
+  gram.&quot;
+  (vector (get trigram 1) (get trigram 2) gram))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn trigrams [tokens]
+  &quot;Extracts all the trigrams from a vector of tokens.&quot;
+  (loop [trigrams []
+         trigram [nil nil nil]
+         tokens tokens]
+    (if (empty? tokens)
+      (if (nil? (last trigram)) trigrams
+        (let [trigram (rotate-onto-trigram trigram nil)
+              trigrams (conj trigrams trigram)
+              trigram (rotate-onto-trigram trigram nil)]
+          (conj trigrams trigram)))
+      (let [token (first tokens)
+            trigram (rotate-onto-trigram trigram token)]
+        (recur (conj trigrams trigram) trigram (rest tokens))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- rotate-onto-bigram [bigram gram]
+  &quot;Shifts the existing elements of the bigram one index to the left, discards
+  the previously first element, and associates the last index with the new
+  gram.&quot;
+  (vector (get bigram 1) gram))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn bigrams [tokens]
+  &quot;Extracts all the bigrams from a vector of tokens.&quot;
+  (loop [bigrams []
+         bigram [nil nil]
+         tokens tokens]
+    (if (empty? tokens)
+      (if (nil? (last bigram)) bigrams
+        (let [bigram (rotate-onto-bigram bigram nil)]
+          (conj bigrams bigram)))
+      (let [token (first tokens)
+            bigram (rotate-onto-bigram bigram token)]
+        (recur (conj bigrams bigram) bigram (rest tokens))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn unigrams [tokens]
+  &quot;Extracts all the unigrams from a vector of tokens.&quot;
+  (map vector tokens))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn frequency [n-grams]
+  &quot;Determines the frequency of each distinct n-gram, and returns a mapping of
+  each n-gram to the number of times it appeared in the collection.  This method
+  can be applied to collections of things other than n-grams, but it was
+  intended for n-grams.&quot;
+  (loop [frequency {}
+         n-grams n-grams]
+    (if (empty? n-grams) frequency
+      (let [n-gram (first n-grams)]
+        (recur (assoc frequency n-gram (inc (get frequency n-gram 0)))
+               (rest n-grams))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn preprocess [document]
+  &quot;Preprocesses the document for further refinement.&quot;
+  (clojure.string/lower-case document)) ;-&gt; This may become more advanced. </pre></td></tr><tr><td class="docs"><p>-> This may become more advanced. </p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>vim: set ft=clojure:</p>
+</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#malea.persistent-heap" name="malea.persistent-heap"><h1 class="project-name">malea.persistent-heap</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Copyright (c) 2013 Dylon Edwards</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The original source was taken and modified from the following Gist:
+- https://gist.github.com/781061   </p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns malea.persistent-heap)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn max-element [element-1 element-2 at-least?]
+  (if (at-least? element-1 element-2) element-1 element-2))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn swap [heap left-index right-index]
+  &quot;Swaps two elements in the heap.&quot;
+  (assoc heap
+         left-index (get heap right-index)
+         right-index (get heap left-index)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn children [index]
+  &quot;Left and right indices of the children of the node at index.&quot;
+  (let [left-index (inc (* index 2))
+        right-index (inc left-index)]
+    [left-index right-index]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn parent-index [index]
+  &quot;Index of the parent node to that at index.&quot;
+  (if (not= 0 index)
+    (/ (- index (if (odd? index) 1 2)) 2)
+    nil))</pre></td></tr><tr><td class="docs"><p>Converts the heap into a tree that can be walked.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn tree
+  ([heap] (tree heap 0))
+  ([heap index]
+   (let [[left-index right-index] (children index)
+         node (get heap index nil)]
+     (when node
+       [node (tree heap left-index) (tree heap right-index)]))))</pre></td></tr><tr><td class="docs"><p>Propogates elements upward to maintain the heap property.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn heap-up 
+  ([heap] (heap-up heap &gt;= (dec (count heap))))
+  ([heap at-least?] (heap-up heap at-least? (dec (count heap)))) 
+  ([heap at-least? index]
+   (if-let [parent-index (parent-index index)]
+     (if (at-least? (get heap index) (get heap parent-index))
+       (recur (swap heap index parent-index) at-least? parent-index)
+       heap)
+     heap)))</pre></td></tr><tr><td class="docs"><p>Propogates elements downward to maintain the heap property.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn heap-down
+  ([heap] (heap-down (pop (swap heap 0 (dec (count heap)))) &gt;= 0))
+  ([heap at-least?] (heap-down (pop (swap heap 0 (dec (count heap)))) at-least? 0))
+  ([heap at-least? index]
+   (let [[left-index right-index] (children index)
+         left-child (get heap left-index nil)
+         right-child (get heap right-index nil)
+         node (get heap index nil)]
+     (if (and node left-child right-child)
+       (cond
+         (at-least? left-child (max-element right-child node at-least?))
+           (recur (swap heap index left-index) at-least? left-index)
+         (at-least? right-child (max-element left-child node at-least?))
+           (recur (swap heap index right-index) at-least? right-index)
+         :else heap)
+       heap))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(deftype PersistentHeap [heap at-least?]
+  clojure.lang.ISeq
+  (first [this] (first heap))
+  (next [this]
+    (-&gt; heap
+      (heap-down at-least?)
+      (PersistentHeap. at-least?)))
+  (more [this] (.next this))
+  (cons [this obj]
+    (-&gt; heap
+      (conj obj)
+      (heap-up at-least?)
+      (PersistentHeap. at-least?)))
+  (seq [this]
+    (seq
+      (loop [collection []
+             heap heap]
+        (if (empty? heap) collection
+          (recur (conj collection (first heap))
+                 (heap-down heap at-least?))))))
+  (count [this] (count heap))
+  (empty [this] (PersistentHeap. [] at-least?))
+  (equiv [this other] (= other heap)))</pre></td></tr><tr><td class="docs"><p>TODO: Implement the more efficient max-heapify algorithm from which a heap
+may be built from a collection.</p>
+
+<p>Heap Algorithms:
+http://courses.csail.mit.edu/6.006/spring11/rec/rec09.pdf </p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn persistent-heap
+  ([collection]
+   (persistent-heap collection &gt;=)) 
+  ([collection at-least?]
+   (into (PersistentHeap. [] at-least?) collection)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn heapsort
+  ([collection]
+   (heapsort collection &gt;=)) 
+  ([collection at-least?]
+   (-&gt;&gt; (persistent-heap collection at-least?)
+        (iterate rest)
+        (take (count collection))
+        (map first))))</pre></td></tr><tr><td class="docs"><p>vim: set ft=clojure:</p>
+</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#malea.wikipedia" name="malea.wikipedia"><h1 class="project-name">malea.wikipedia</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Copyright (c) 2012 Dylon Edwards</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns malea.wikipedia
+  (:use korma.core
+        clojure.pprint)
+  (:require [malea.nlp :as nlp]
+            [clojure.data.xml :as xml]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defentity pages)
+(defentity grams)
+(defentity trigrams)
+(defentity bigrams)
+(defentity unigrams)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn insert-pages [records]
+  &quot;Inserts complete, new Wikipedia pages into the database.&quot;
+  (insert pages
+    (values records)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn insert-grams [records]
+  &quot;Inserts new grams into the database.  Each gram should be a string.&quot;
+  (doseq [record records]
+    (when (empty?
+      (select grams
+        (aggregate (count :*) :singleton :value)
+        (where {:value [= (:value record)]})
+        (limit 1)))
+      (insert grams 
+        (values [record])))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn insert-trigrams [records]
+  &quot;Inserts new trigrams into the database.&quot;
+  (insert trigrams 
+    (values records)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn insert-bigrams [records]
+  &quot;Inserts new bigrams into the database.&quot;
+  (insert bigrams
+    (values records)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn insert-unigrams [records]
+  &quot;Inserts new unigrams into the database.&quot;
+  (insert unigrams
+    (values records)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn gram-map [values]
+  &quot;Bijection of gram-text onto gram-id from the database.&quot;
+  (-&gt;&gt; (select grams
+          (fields :id :value)
+          (where {:value [in values]}))
+    (reduce
+      #(assoc %1 (:value %2) (:id %2)) {})))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn trigrams-for-page [^long page-id]
+  &quot;Trigrams for the given page.&quot;
+  (-&gt; (select* trigrams)
+    (where {:page_id page-id})))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn bigrams-for-page [^long page-id]
+  &quot;Bigrams for the given page.&quot;
+  (-&gt; (select* bigrams)
+    (where {:page_id page-id})))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn unigrams-for-page [^long page-id]
+  &quot;Unigrams for the given page.&quot;
+  (-&gt; (select* unigrams)
+    (where {:page_id page-id})))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- filter-tag [tag xml]
+  (filter #(= tag (:tag %)) xml))</pre></td></tr><tr><td class="docs"><p>TODO: Strip all HTML tags from the documents.  This may be able to go into
+<code>malea.nlp/preprocess</code>.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The original XML-parsing algorithm came from here: 
+http://stackoverflow.com/a/9993325/206543</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn n-gram [page-id frequency records attributes]
+  (loop [index 0
+         n-gram {}]
+    (if-not (&lt; index (count attributes))
+      (conj records
+        (assoc n-gram
+          :page_id page-id
+          :frequency (frequency attributes))) 
+      (recur
+        (inc index)
+        (assoc n-gram
+          (keyword (str &quot;gram_&quot; (inc index) &quot;_id&quot;))
+          (nth attributes index))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- insert-page-from-xml [{page-id :id, page-text :text}]
+  (let [preprocessed-text (nlp/preprocess page-text)
+        sentences (nlp/get-sentences preprocessed-text)
+        tokens (map nlp/tokenize sentences)
+        distinct-tokens (distinct (flatten tokens))
+        trigrams (apply concat (map nlp/trigrams tokens))
+        bigrams  (apply concat (map nlp/bigrams tokens))
+        unigrams (apply concat (map nlp/unigrams tokens))]
+    (insert-pages [{:id page-id, :text page-text}])
+    (insert-grams (map #(hash-map :value %) distinct-tokens))
+    (let [gram-map (gram-map distinct-tokens)
+          trigram-ids (map #(vec (map gram-map %)) trigrams)
+          bigram-ids  (map #(vec (map gram-map %)) bigrams)
+          unigram-ids (map #(vec (map gram-map %)) unigrams)
+          trigram-frequency (nlp/frequency trigram-ids)
+          bigram-frequency  (nlp/frequency bigram-ids)
+          unigram-frequency (nlp/frequency unigram-ids)
+          trigram-records
+            (reduce
+              (partial n-gram page-id trigram-frequency)
+              [] (distinct trigram-ids))
+          bigram-records
+            (reduce
+              (partial n-gram page-id bigram-frequency)
+              [] (distinct bigram-ids))
+          unigram-records
+            (reduce
+              (partial n-gram page-id unigram-frequency)
+              [] (distinct unigram-ids))]
+      (insert-trigrams trigram-records)
+      (insert-bigrams  bigram-records)
+      (insert-unigrams unigram-records))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- process-text-element [attributes text-element]
+  (let [page-text (first (:content text-element))
+        attributes (assoc attributes :text page-text)]
+    (insert-page-from-xml attributes)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- process-revision-element [attributes revision-element]
+  (dorun (-&gt;&gt; (:content revision-element)
+    (filter #(= :text (:tag %)))
+    (map (partial process-text-element attributes)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- extract-page-id [page-element]
+  (read-string
+    (first
+      (:content
+        (first
+          (filter
+            #(= :id (:tag %))
+            (:content page-element)))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- process-page-element [attributes page-element]
+  (let [page-id (extract-page-id page-element)
+        attributes (assoc attributes :id page-id)]
+    (dorun (-&gt;&gt; (:content page-element)
+      (filter #(= :revision (:tag %)))
+      (map (partial process-revision-element attributes))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn insert-pages-from-xml [xml-input-stream]
+  (dorun (-&gt;&gt; (:content (xml/parse xml-input-stream :coalescing false))
+    (filter #(= :page (:tag %)))
+    (map (partial process-page-element {})))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>
