@@ -22,31 +22,79 @@
   (:use [clojure.tools.cli :only [cli]])
   (:require [leiningen.core.eval :as lein.eval]))
 
+(defn- train! [project model]
+  (if (= model "corpus")
+    (lein.eval/eval-in-project project
+      `(do
+         (require 'malea.wikipedia
+                  'malea.database)
+         (malea.database/establish-malea-db-connection!)
+         (with-open [xml-resource#
+                      (clojure.java.io/input-stream
+                        (clojure.java.io/resource
+                          "wikipedia/enwiki-latest-pages-articles.xml"))]
+         (malea.wikipedia/insert-pages-from-xml xml-resource#)))))
+  (binding [*out* *err*]
+    (println (str "The model you specified is \""model"\". The only model supported is \"corpus\""))
+    (System/exit 1)))
+
+(defn- clean! [project table]
+  (if (= table "grams")
+    (lein.eval/eval-in-project project
+      `(do
+         (require 'malea.database
+                  'korma.core)
+         (malea.database/establish-malea-db-connection!)
+         (korma.core/exec-raw [(str
+           "DELETE FROM grams "
+           "WHERE NOT EXISTS ("
+             "SELECT true "
+             "FROM trigrams "
+             "WHERE trigrams.gram_1_id = grams.id "
+                "OR trigrams.gram_2_id = grams.id "
+                "OR trigrams.gram_3_id = grams.id"
+           ") "
+           "AND NOT EXISTS ("
+             "SELECT true "
+             "FROM bigrams "
+             "WHERE bigrams.gram_1_id = grams.id "
+                "OR bigrams.gram_2_id = grams.id"
+           ") "
+           "AND NOT EXISTS ("
+             "SELECT true "
+             "FROM unigrams "
+             "WHERE unigrams.gram_1_id = grams.id"
+           ")")])))
+    (binding [*out* *err*]
+      (println (str "The table you specified is \""table"\". The only table supported is \"grams\""))
+      (System/exit 1))))
+
+(defn- drop-indices! [])
+
+(defn- restore-indices! [])
+
+(defn- print-stats [model]
+  (if (= model "invalid")
+    '()
+    (binding [*out* *err*]
+      (println (str "You specified \""model"\", but the only supported model is \"invalid\""))
+      (System/exit 1))))
+
 (defn- parse-args [args]
   (cli args
-    ["-t" "--train" "Trains a model of the type specified."]))
+    ["-t" "--train" "Trains a model of the type specified."]
+    ["-c" "--clean" "Cleans the specified table."]
+    ["-d" "--drop-indices" "Drop most of the indices to speed up insertions." :flag true]
+    ["-r" "--restore-indices" "Restore any dropped indices for data integrity." :flag true]
+    ["-s" "--stats" "Print statistics of the given type."]))
 
 (defn wikipedia [project & args]
   (let [[options args banner] (parse-args args)]
-    (cond
-      (:train options)
-        (case (:train options)
-          "corpus"
-            (lein.eval/eval-in-project project
-              `(do
-                 (require 'malea.wikipedia
-                          'malea.database)
-                 (malea.database/establish-malea-db-connection!)
-                 (with-open [xml-resource#
-                              (clojure.java.io/input-stream
-                                (clojure.java.io/resource
-                                  "wikipedia/enwiki-latest-pages-articles.xml"))]
-                   (malea.wikipedia/insert-pages-from-xml xml-resource#))))
-          (binding [*out* *err*]
-            (println "The only accepted command is \"lein wikipedia --train corpus\"")
-            (System/exit 1)))
-      :else
-        (binding [*out* *err*]
-          (println "The only accepted command is \"lein wikipedia --train corpus\"")
-          (System/exit 1)))))
+    (doseq [[command arguments] options]
+      (case command 
+        :drop-indices (when arguments (drop-indices!))
+        :restore-indices (when arguments (restore-indices!))
+        :train (when arguments (train! project arguments))
+        :clean (when arguments (clean! project arguments))
+        :stats (when arguments (print-stats arguments))))))
 

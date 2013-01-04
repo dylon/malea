@@ -25,6 +25,7 @@
             :url "http://www.opensource.org/licenses/mit-license.php"}
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [incanter "1.4.1"]
+                 [net.java/textile-j "2.2"]
                  [org.clojure/data.xml "0.0.6"]
                  [clojure-opennlp "0.2.0"]
                  [korma "0.3.0-beta13"]

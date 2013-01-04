@@ -19,7 +19,14 @@
 ;; SOFTWARE.
 
 (ns malea.nlp
-  (:require [opennlp.nlp :as nlp]))
+  (:require [opennlp.nlp :as nlp])
+  (:import net.java.textilej.parser.MarkupParser
+           net.java.textilej.parser.builder.HtmlDocumentBuilder
+           net.java.textilej.parser.markup.mediawiki.MediaWikiDialect
+           javax.swing.text.html.HTMLEditorKit$ParserCallback
+           javax.swing.text.html.parser.ParserDelegator
+           java.io.StringReader
+           java.io.StringWriter))
 
 (def get-sentences
   "Extracts the natural language sentences from a body of text."
@@ -87,8 +94,52 @@
         (recur (assoc frequency n-gram (inc (get frequency n-gram 0)))
                (rest n-grams))))))
 
-(defn preprocess [document]
+;; TODO: Consider normalizing the text by expanding contractions: 
+;;
+;; - http://en.wikipedia.org/wiki/Wikipedia:List_of_English_contractions
+;; - http://en.wikipedia.org/wiki/Contraction_(grammar)#English
+;;
+;; TODO: Consider writing a custom parser:
+;;
+;; - http://www.mediawiki.org/wiki/Markup_spec
+(defn preprocess [markup]
   "Preprocesses the document for further refinement."
-  (clojure.string/lower-case document)) ;-> This may become more advanced. 
+
+  ;; The algorithm for transforming the MediaWiki markup into plain text came
+  ;; from this StackOverflow reply:
+  ;;
+  ;; - http://stackoverflow.com/a/2865012/206543
+  ;;
+  ;; Additional list of WikiMedia parsers:
+  ;;
+  ;; - http://www.mediawiki.org/wiki/Alternative_parsers
+
+  (let [^StringWriter writer (StringWriter.)
+        ^HtmlDocumentBuilder builder
+          (doto (HtmlDocumentBuilder. writer)
+            (.setEmitAsDocument false))
+        ^MarkupParser parser
+          (doto (MarkupParser. (MediaWikiDialect.))
+            (.setBuilder builder)
+            (.parse markup))
+        ^String html (.toString writer)
+        ^StringBuilder cleaned (StringBuilder.)
+        ^HTMLEditorKit$ParserCallback callback
+          (proxy [HTMLEditorKit$ParserCallback] []
+            (handleText [^chars data pos]
+              (-> (.append cleaned (String. data))
+                (.append " "))))]
+
+    (.parse (ParserDelegator.) (StringReader. html) callback false)
+    (-> (clojure.string/lower-case cleaned)
+      (clojure.string/replace
+        #"(?x)
+        \{\{[^}]*}}
+        |
+        \[[a-z]+://\S+\s([^\]]*)]
+        |
+        <ref\b[^>]*>.*?</ref>
+        |
+        '{2,}" "$1"))))
 
 ;; vim: set ft=clojure:
