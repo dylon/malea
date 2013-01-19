@@ -19,71 +19,180 @@
 ;; SOFTWARE.
 
 (ns malea.wikipedia
-  (:use korma.core
-        clojure.pprint
-        clojure.data)
+  (:use [korma core]
+        [clojure pprint data])
   (:require [malea.nlp :as nlp]
-            [clojure.data.xml :as xml])
-  (:import org.postgresql.util.PSQLException))
+            [malea.database :as db]
+            [clojure.data.xml :as xml]
+            [clojure.java.jdbc :as jdbc]
+            [korma.db])
+  (:import org.postgresql.util.PSQLException
+           org.stringtemplate.v4.STGroupFile))
 
-(def ^:private ^:const BATCH-SIZE 1000)
+(def ^:private ^:const BATCH-SIZE 250)
 
 (defentity pages)
 (defentity grams)
-(defentity trigrams)
-(defentity bigrams)
-(defentity unigrams)
+(defentity n_grams)
+(defentity trigrams)   ;-> view, not a table
+(defentity bigrams)    ;-> view, not a table
+(defentity unigrams)   ;-> view, not a table
+(defentity quadgrams)  ;-> view, not a table
+
+(def ^:private wikipedia-stg
+  (delay
+    (let [st-group
+            (STGroupFile.
+              "src/stringtemplate/postgresql/malea/wikipedia.stg")]
+
+      ;; pre-compile the templates for thread safety
+      (dorun
+        (map
+          #(.getInstanceOf st-group %)
+          (.getTemplateNames st-group)))
+
+      st-group)))
+
+(defn- wikipedia-st [template-name]
+  "New StringTemplate instance of the StringTemplateGroup wikipedia-stg"
+  (.getInstanceOf @wikipedia-stg template-name))
 
 (defn insert-grams-if-not-exist! [records]
   "Inserts new grams into the database.  Each gram should be a string."
-  (doseq [record records]
-    (loop [batch (take BATCH-SIZE records)
-           records (drop BATCH-SIZE records)]
+  (loop [batch (take BATCH-SIZE records)
+         records (drop BATCH-SIZE records)
+         gram-map {}]
+    (if (empty? batch) gram-map
+      (let [template (wikipedia-st "insert_grams_if_not_exist")]
+        (.add template "range" (range (count batch)))
+        (recur
+          (take BATCH-SIZE records)
+          (drop BATCH-SIZE records)
+          (reduce #(assoc %1 (:value %2) (:id %2)) gram-map
+            (exec-raw [(.render template) batch] :results)))))))
+
+(defn reserve-n-grams! [n-gram-count]
+  "Reserves the `n-gram-count` identifiers within the `n_grams` table"
+  (-> (exec-raw ["SELECT reserve_n_grams(?::integer)" [n-gram-count]] :results)
+    (first)
+    (get :reserve_n_grams)
+    (.getArray)))
+
+(defn unwrap-n-grams
+  "Accepts an n-gram trie and unwraps it to a list of n-gram records, which may
+  be inserted into the `n_grams` table."
+  ([gram-trie page-id]
+   (unwrap-n-grams gram-trie page-id '()))
+  ([gram-trie page-id unwrapped-n-grams]
+   (if (empty? gram-trie) unwrapped-n-grams
+     (let [[gram-id record] (first gram-trie)
+           gram-trie (rest gram-trie)
+           unwrapped-n-grams
+            (conj unwrapped-n-grams
+              (assoc
+                (select-keys record [:id :parent_id :frequency])
+                :gram_id gram-id
+                :page_id page-id))
+           unwrapped-n-grams
+            (concat unwrapped-n-grams
+              (unwrap-n-grams (:children record) nil '()))]
+       (recur gram-trie page-id unwrapped-n-grams)))))
+
+(defn set-id-and-parent-id
+  "Walks the `gram-trie` and associates with each of its nodes an `id` attribute
+  and `parent-id` attribute (if it has a parent).  The function accepts two
+  parameters: `gram-trie`, which is a trie of n-grams; and `n-gram-ids`, which
+  is a list of unique identifiers."
+  ([gram-trie n-gram-ids]
+   (first
+     (set-id-and-parent-id gram-trie n-gram-ids {} nil)))
+  ([gram-trie n-gram-ids gram-trie-with-ids parent-id]
+   (if (empty? gram-trie) [gram-trie-with-ids n-gram-ids]
+     (let [[gram data] (first gram-trie)
+           gram-trie (rest gram-trie)
+           n-gram-id (first n-gram-ids)
+           n-gram-ids (rest n-gram-ids)
+           [children-n-gram-trie n-gram-ids]
+             (set-id-and-parent-id
+               (:children data) n-gram-ids {} n-gram-id)
+           gram-trie-with-ids
+             (assoc gram-trie-with-ids gram
+               (assoc data
+                 :id n-gram-id
+                 :parent_id parent-id
+                 :children children-n-gram-trie))]
+       (recur gram-trie n-gram-ids gram-trie-with-ids parent-id)))))
+
+(defn insert-n-grams! [gram-map page-id gram-trie]
+  "Inserts new n-grams into the database.  `gram-trie` should be structured as
+  follows:
+
+  (let [gram-trie {
+    \"unigram-1\" {
+      :frequency 12
+      :children {
+        \"bigram-1\" {
+          :frequency 23
+          :children {
+            \"trigram-1\" {
+              :frequency 12}
+            \"trigram-2\" {
+              :frequency 1}}}
+        \"bigram-2\" {
+          :frequency 58
+          :children {
+            \"trigram-3\" {
+              :frequency 278
+              :children {
+                \"quadgram-1\" {
+                  :frequency 28}}}}}}}
+    \"unigram-2\" {
+      :frequency 98
+      :children {
+        \"bigram-3\" {
+          :frequency 68} ;; NOTE: There are no children for this bigram!
+        \"bigram-4\" {
+          :frequency 5
+          :children {
+            \"trigram-4\" {
+              :frequency 30}}}}}}]
+    (insert-n-grams! gram-map page-id gram-trie))
+
+  where, `frequency` is the number of time the n-gram appeared in the page, and
+  `children` consists of the (n+1)-grams having the n-gram as their prefix.  The
+  keys are the values of the n-gram tails (e.g. if one has the bigram
+  [\"one\" \"two\"], then the key would be \"two\"). Notice that each n-gram has
+  a frequency but each does not have children: this structure will easily let me
+  add quadgrams (four-grams) and quintgrams (five-grams), and even drop the
+  trigrams (three-grams); the catch is that there must be an (n-1)-gram for
+  there to be an n-gram."
+
+  (let [n-gram-ids (reserve-n-grams! (nlp/count-n-grams gram-trie))
+        gram-trie (set-id-and-parent-id gram-trie n-gram-ids)
+        n-grams (unwrap-n-grams gram-trie page-id)]
+    (loop [batch (take BATCH-SIZE n-grams)
+           n-grams (drop BATCH-SIZE n-grams)]
       (when-not (empty? batch)
-        (exec-raw
-          [(str
-             "SELECT insert_grams_if_not_exist(ARRAY["
-               (clojure.string/join ","
-                 (take (count batch) (repeat \?))) "])")
-           (map #(:value %) batch)] :results)))))
+        (insert n_grams
+          (values batch))
+        (recur
+          (take BATCH-SIZE n-grams)
+          (drop BATCH-SIZE n-grams))))))
 
-(defn insert-trigrams! [page-id records]
-  "Inserts new trigrams into the database."
-  (loop [batch (take BATCH-SIZE records)
-         records (drop BATCH-SIZE records)]
-    (when-not (empty? batch)
-      (insert trigrams
-        (values batch))
-      (recur (take BATCH-SIZE records)
-             (drop BATCH-SIZE records)))))
-
-(defn insert-bigrams! [page-id records]
-  "Inserts new bigrams into the database."
-  (loop [batch (take BATCH-SIZE records)
-         records (drop BATCH-SIZE records)]
-    (when-not (empty? batch)
-      (insert bigrams
-        (values batch))
-      (recur (take BATCH-SIZE records)
-             (drop BATCH-SIZE records)))))
-
-(defn insert-unigrams! [page-id records]
-  "Inserts new unigrams into the database."
-  (loop [batch (take BATCH-SIZE records)
-         records (drop BATCH-SIZE records)]
-    (when-not (empty? batch)
-      (insert unigrams
-        (values batch))
-      (recur (take BATCH-SIZE records)
-             (drop BATCH-SIZE records)))))
-
-(defn gram-map [values]
+(defn gram-map [gram-values]
   "Bijection of gram-text onto gram-id from the database."
-  (->> (select grams
-          (fields :id :value)
-          (where {:value [in values]}))
-    (reduce
-      #(assoc %1 (:value %2) (:id %2)) {})))
+  (loop [batch (take BATCH-SIZE gram-values)
+         gram-values (drop BATCH-SIZE gram-values)
+         gram-map {}]
+    (if (empty? batch) gram-map
+      (recur
+        (take BATCH-SIZE gram-values)
+        (drop BATCH-SIZE gram-values)
+        (merge gram-map
+          (reduce #(assoc %1 (:value %2) (:id %2)) {}
+            (select grams
+              (fields :id :value)
+              (where {:value [in batch]}))))))))
 
 (defn trigrams-for-page [^long page-id]
   "Trigrams for the given page."
@@ -103,118 +212,38 @@
 (defn- filter-tag [tag xml]
   (filter #(= tag (:tag %)) xml))
 
-;; TODO: Strip all HTML tags from the documents.  This may be able to go into
-;; `malea.nlp/preprocess`.
-
-;; The original XML-parsing algorithm came from here:
-;; http://stackoverflow.com/a/9993325/206543
-
-(defn n-gram [page-id frequency records attributes]
-  "Constructs a new n-gram record, and appends it to `records`.
-
-  1. `page-id` Identifier of the corresponding page.
-  2. `frequency` Mapping of n-grams to their frequency in the page.
-  3. `records` Accumulator of n-gram records.
-  4. `attributes` Sequential identifiers of grams within this record."
-
-  (loop [index 0
-         n-gram {}]
-    (if-not (< index (count attributes))
-      (conj records
-        (assoc n-gram
-          :page_id page-id
-          :frequency (frequency attributes)))
-      (recur
-        (inc index)
-        (assoc n-gram
-          (keyword (str "gram_" (inc index) "_id"))
-          (nth attributes index))))))
-
-(defn insert-or-update-page! [page]
-  "If the page does not exist, it is created; otherwise, it is updated."
-  (first
+(defn insert-or-replace-page! [page]
+  "If the page does not exist, it is created; otherwise, it is replaced."
+  (let [{:keys [title id redirect revision text term_sequence]} page
+        statement
+          "SELECT insert_or_update_page( ?::varchar(256)
+                                       , ?::integer
+                                       , ?::varchar(256)
+                                       , ?::integer
+                                       , ?::text
+                                       , ?::integer[]
+                                       );"
+        term_sequence
+          (-> (wikipedia-st "term_sequence")
+            (.add "sequence" term_sequence)
+            (.render))]
     (exec-raw
-      ["SELECT insert_or_update_page(?::integer,?::integer,?::varchar,?::varchar,?::text)"
-       (map page [:id :revision :title :redirect :text])] :results)))
+      [statement [title id redirect revision text term_sequence]] :results)))
 
 (defn- insert-page-from-xml! [page]
-  (let [{page-id :id, page-text :text} page
-        preprocessed-text (nlp/preprocess page-text)
-        sentences (nlp/get-sentences preprocessed-text)
-        tokens (map nlp/tokenize sentences)
-        distinct-tokens (distinct (flatten tokens))
-        page-task (future (insert-or-update-page! page))
-        gram-task
-          (future
-            (insert-grams-if-not-exist!
-              (map #(hash-map :value %) distinct-tokens)))]
-
-    @gram-task
-
-    ;; TODO: Refactor to clean these up!!!
-    (when-let [retval @page-task]
-      (let [gram-map (gram-map distinct-tokens)
-            trigram-task
-              (future
-                (let [trigrams (apply concat (map nlp/trigrams tokens))
-                      trigram-ids (map #(vec (map gram-map %)) trigrams)
-                      trigram-frequency (nlp/frequency trigram-ids)
-                      trigram-records
-                        (reduce
-                          (partial n-gram page-id trigram-frequency)
-                          [] (distinct trigram-ids))]
-                  
-                  ;(try
-                    ;(insert-trigrams! page-id trigram-records)
-                    ;(catch Exception exception
-                      ;(newline)
-                      ;(prn (clojure.string/join "" (repeat 100 \=)))
-                      ;(prn "::: retval")
-                      ;(newline)
-                      ;(pprint retval)
-                      ;(newline)
-                      ;(prn (clojure.string/join "" (repeat 100 \=)))
-                      ;(prn "::: page")
-                      ;(newline)
-                      ;(pprint page)
-                      ;(newline)
-                      ;(prn (clojure.string/join "" (repeat 100 \=)))
-                      ;(prn "::: Page from Database")
-                      ;(newline)
-                      ;(pprint (select pages (where (= :id page-id))))
-                      ;(newline)
-                      ;(prn (clojure.string/join "" (repeat 100 \=)))
-                      ;(prn "Trigrams")
-                      ;(newline)
-                      ;(pprint trigram-records)
-                      ;(newline)
-                      ;(prn (clojure.string/join "" (repeat 100 \=)))
-                      ;(throw exception)))
-                  
-                  (insert-trigrams! page-id trigram-records)))
-            bigram-task
-              (future
-                (let [bigrams  (apply concat (map nlp/bigrams tokens))
-                      bigram-ids  (map #(vec (map gram-map %)) bigrams)
-                      bigram-frequency (nlp/frequency bigram-ids)
-                      bigram-records
-                        (reduce
-                          (partial n-gram page-id bigram-frequency)
-                          [] (distinct bigram-ids))]
-                  (insert-bigrams! page-id bigram-records)))
-            unigram-task
-              (future
-                (let [unigrams (apply concat (map nlp/unigrams tokens))
-                      unigram-ids (map #(vec (map gram-map %)) unigrams)
-                      unigram-frequency (nlp/frequency unigram-ids)
-                      unigram-records
-                        (reduce
-                          (partial n-gram page-id unigram-frequency)
-                          [] (distinct unigram-ids))]
-                  (insert-unigrams! page-id unigram-records)))]
-        @trigram-task
-        @bigram-task
-        @unigram-task))))
+  (korma.db/transaction
+    (let [{page-id :id, page-text :text} page
+          preprocessed-text (nlp/preprocess page-text)
+          term-sequence (nlp/tokenize preprocessed-text)
+          distinct-terms (set term-sequence)
+          gram-map (insert-grams-if-not-exist! distinct-terms)
+          term-sequence (map gram-map term-sequence)
+          n-grams (nlp/extract-n-grams 4 term-sequence)
+          gram-trie (reduce nlp/insert-n-gram {} n-grams)
+          ;; Ignore the raw text for now -- it will consume too much space
+          page (assoc (dissoc page :text) :term_sequence term-sequence)]
+      (insert-or-replace-page! page)
+      (insert-n-grams! gram-map page-id gram-trie))))
 
 (defn- page-is-valid? [page]
   (and (:id page) (:title page) (:revision page) (:text page)))
@@ -267,5 +296,5 @@
 (defn insert-pages-from-xml [xml-input-stream]
   (dorun (->> (:content (xml/parse xml-input-stream :coalescing false))
     (filter #(= :page (:tag %)))
-    (pmap (partial process-page-element! {})))))
+    (map (partial process-page-element! {})))))
 

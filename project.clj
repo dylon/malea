@@ -27,7 +27,9 @@
                  [incanter "1.4.1"]
                  [net.java/textile-j "2.2"]
                  [org.clojure/data.xml "0.0.6"]
-                 [clojure-opennlp "0.2.0"]
+                 [org.antlr/antlr4 "4.0-rc-1"]
+                 [edu.stanford.nlp/stanford-corenlp "1.3.4"]
+                 ;[clojure-opennlp "0.2.0"]
                  [korma "0.3.0-beta13"]
                  [postgresql "9.1-901.jdbc4"]
                  [org.clojure/java.jdbc "0.2.3"]
@@ -38,14 +40,15 @@
                                                     com.sun.jdmk/jmxtools
                                                     com.sun.jmx/jmxri]]
                  [org.clojure/tools.logging "0.2.3"]]
-  :plugins [[ragtime/ragtime.lein "0.3.2"]]
+  :plugins [[ragtime/ragtime.lein "0.3.2"]
+            [org.antlr/stringtemplate "4.0.7"]]
   :profiles {:dev {:dependencies [[midje "1.4.0"]]
                    :plugins [[lein-midje "2.0.1"]
-                             [org.antlr/ST4 "4.0.4"]
                              [org.clojure/tools.cli "0.2.2"]]
                    :ragtime {:migrations ragtime.sql.files/migrations
                              :database "jdbc:postgresql:malea?user=malea"}}
              :test [{:ragtime {:migrations ragtime.sql.files/migrations
                                :database "jdbc:postgresql:malea_test?user=malea"}}
                     :default]}
-  :source-paths ["src/clojure/"])
+  :source-paths ["src/clojure/"]
+  :java-source-paths ["src/java/"])

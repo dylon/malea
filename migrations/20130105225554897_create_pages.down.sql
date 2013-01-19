@@ -1,4 +1,4 @@
--- Copyright (c) 2012 Dylon Edwards
+-- Copyright (c) 2013 Dylon Edwards
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -18,8 +18,6 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-DROP INDEX IF EXISTS index_unigrams_on_gram_1_id;
-DROP INDEX IF EXISTS index_unigrams_on_page_id;
-DROP TABLE IF EXISTS unigrams;
+DROP TABLE pages;
 
--- vim: set ft=pgsql:
+-- vim: set ft=pgsql et sta ts=2 sw=2:

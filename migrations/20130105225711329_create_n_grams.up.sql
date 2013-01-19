@@ -18,11 +18,21 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-DELETE FROM pages
-WHERE text IS NULL;
+CREATE TABLE n_grams (
+	-- Unique identifier of this n-gram
+	id bigserial PRIMARY KEY,
 
-ALTER TABLE pages
-ALTER COLUMN text
-SET NOT NULL;
+	-- Identifier of this n-gram's parent (n - 1)-gram
+	parent_id bigint,
 
--- vim: set ft=pgsql:
+	-- Identifier of the Wikipedia page associated with this n-gram
+	page_id integer,
+
+	-- Identifier of the gram associated with this n-gram (can be null)
+	gram_id integer,
+
+	-- How many times this n-gram appeared in the corresponding page
+	frequency smallint
+);
+
+-- vim: set ft=pgsql et sta ts=2 sw=2:

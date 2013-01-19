@@ -18,8 +18,29 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-ALTER TABLE pages
-ALTER COLUMN text
-DROP NOT NULL;
+/* For Wikipedia naming restrictions, see the following article:
+ *
+ * http://en.wikipedia.org/wiki/Wikipedia:Naming_conventions_(technical_restrictions)
+ * ========================================================================== */
 
--- vim: set ft=pgsql:
+CREATE TABLE pages (
+	-- Unique identifier, provided by Wikipedia
+	id integer,
+
+	-- Wikipedia title of the page
+	title varchar(256) PRIMARY KEY,
+
+	-- Redirect to this page
+	redirect varchar(256),
+
+	-- Latest revision of the page
+	revision integer,
+
+	-- Raw text of the page (useful for simulation)
+	text text,
+
+  -- Tokenized sequence of terms in this document
+	term_sequence integer[]
+);
+
+-- vim: set ft=pgsql et sta ts=2 sw=2:

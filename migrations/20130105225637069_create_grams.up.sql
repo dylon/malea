@@ -18,6 +18,12 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
-DROP FUNCTION insert_grams_if_not_exist(varchar(255)[]);
+CREATE TABLE grams (
+	-- Unique identifier of this gram (referenced by every n-gram having it)
+	id serial,
 
--- vim: set ft=pgsql:
+	-- Unique text value of this n-gram
+	value varchar PRIMARY KEY
+);
+
+-- vim: set ft=pgsql et sta ts=2 sw=2:

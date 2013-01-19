@@ -1,0 +1,3 @@
+footer() ::= <%
+-- vim: set ft=pgsql et sta ts=2 sw=2:
+%>

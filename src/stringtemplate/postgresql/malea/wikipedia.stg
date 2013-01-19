@@ -1,0 +1,6 @@
+insert_grams_if_not_exist(range) ::= <<
+SELECT id, value
+FROM insert_grams_if_not_exist(ARRAY[<range:{x|?}; separator=",">]);
+>>
+
+term_sequence(sequence) ::= <<{<sequence:{term|<term>}; separator=",">}>>

@@ -23,7 +23,7 @@
   (:import com.mchange.v2.c3p0.ComboPooledDataSource))
 
 (defn pool [{:keys [classname subprotocol subname user password]}]
-  (let [datasource 
+  (let [datasource
           (doto (ComboPooledDataSource.)
             (.setDriverClass classname)
             (.setJdbcUrl (str "jdbc:"subprotocol":"subname))
@@ -34,6 +34,12 @@
             ;; expire connections after 3 hours of inactivity:
             (.setMaxIdleTime (* 3 30 60)))]
     {:datasource datasource}))
+
+(let [db-connection (atom nil)]
+  (defn current-db-connection
+    ([] @db-connection)
+    ([new-db-connection]
+     (reset! db-connection new-db-connection))))
 
 (defmacro ->SpecifyDatabase [^String db-name]
   (let [db-identifier
@@ -55,7 +61,8 @@
        (def ~pooled-db
          (delay
             (korma.db/default-connection
-              (pool ~db-spec))))
+              (current-db-connection
+                (pool ~db-spec)))))
        (defn ~db-connection []
          (deref ~pooled-db))
        (defn ~establish-db-connection []

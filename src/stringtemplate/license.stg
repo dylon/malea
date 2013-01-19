@@ -1,0 +1,24 @@
+license(year, author, line_comment) ::= <<
+<line_comment> Copyright (c) <year> <author>
+<line_comment>
+<line_comment> Permission is hereby granted, free of charge, to any person
+<line_comment> obtaining a copy of this software and associated documentation
+<line_comment> files (the "Software"), to deal in the Software without
+<line_comment> restriction, including without limitation the rights to use,
+<line_comment> copy, modify, merge, publish, distribute, sublicense, and/or sell
+<line_comment> copies of the Software, and to permit persons to whom the
+<line_comment> Software is furnished to do so, subject to the following
+<line_comment> conditions:
+<line_comment>
+<line_comment> The above copyright notice and this permission notice shall be
+<line_comment> included in all copies or substantial portions of the Software.
+<line_comment>
+<line_comment> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+<line_comment> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+<line_comment> OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+<line_comment> NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+<line_comment> HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+<line_comment> WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+<line_comment> FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+<line_comment> OTHER DEALINGS IN THE SOFTWARE.
+>>

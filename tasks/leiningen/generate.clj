@@ -23,16 +23,28 @@
   (:require [leiningen.core.eval :as lein.eval])
   (:import java.util.Calendar
            java.io.File
-           org.stringtemplate.v4.ST))
+           org.stringtemplate.v4.STGroupFile))
+
+(def ^:private ^:const TEMPLATE-ROOT "src/stringtemplate")
+(def ^:private ^:const POSTGRESQL-TEMPLATE-DIR
+  (str TEMPLATE-ROOT "/postgresql"))
+(def ^:private ^:const CLOJURE-TEMPLATE-DIR
+  (str TEMPLATE-ROOT "/clojure"))
 
 (def ^:private ^:const MIGRATIONS-PATH "migrations")
-(def ^:private ^:const MIGRATION-TEMPLATE "src/stringtemplate/postgresql/migration.sql.stg")
+(def ^:private ^:const MIGRATION-GROUP
+  (str POSTGRESQL-TEMPLATE-DIR "/migration.sql.stg"))
+(def ^:private ^:const MIGRATION-TEMPLATE "migration")
 
 (def ^:private ^:const SOURCE-PATH "src/clojure")
-(def ^:private ^:const SOURCE-TEMPLATE "src/stringtemplate/clojure/source.clj.stg")
+(def ^:private ^:const SOURCE-GROUP
+  (str CLOJURE-TEMPLATE-DIR "/source.clj.stg"))
+(def ^:private ^:const SOURCE-TEMPLATE "source")
 
 (def ^:private ^:const TEST-PATH "test")
-(def ^:private ^:const TEST-TEMPLATE "src/stringtemplate/clojure/test.clj.stg")
+(def ^:private ^:const TEST-GROUP
+  (str CLOJURE-TEMPLATE-DIR "/test.clj.stg"))
+(def ^:private ^:const TEST-TEMPLATE "test")
 
 (defn calendar-attributes []
   (let [calendar (Calendar/getInstance)]
@@ -52,20 +64,26 @@
   (merge (author-attributes)
          (calendar-attributes)))
 
-(defn ->template
-  ([#^String text ^java.util.Map attributes]
-   (let [attributes (merge (shared-attributes) attributes)
-         template (ST. text)]
-     (doseq [[^String name ^Object value] attributes]
-       (.add template name value))
-     (.render template)))
-  ([#^String text]
-   (->template text {})))
+(let [memo-groups (atom {})]
+  (defn ->template
+    ([group-path template-name attributes]
+     (let [attributes (merge (shared-attributes) attributes)
+           group (get @memo-groups group-path
+                    (let [group (STGroupFile. group-path)]
+                      (swap! memo-groups assoc group-path group)
+                      group))
+           template (.getInstanceOf group template-name)]
+       (doseq [[attribute value] (select-keys attributes
+                                   (.. template getAttributes keySet))]
+         (.add template attribute value))
+       (.render template)))
+    ([group-path template-name]
+     (->template group-path template-name {}))))
 
 (defn generate-migration! [args]
   (require 'clojure.java.io)
   (let [migration-name (-> (clojure.string/join " " args)
-                         clojure.string/trim 
+                         clojure.string/trim
                          (clojure.string/replace #"[\s_-]+" "_")
                          (clojure.string/replace #"([A-Za-z0-9])([A-Z])" "$1_$2")
                          clojure.string/lower-case)
@@ -78,7 +96,7 @@
         seconds (format "%02d" (.get calendar Calendar/SECOND))
         milliseconds (format "%03d" (.get calendar Calendar/MILLISECOND))
         prefix (str year month day hours minutes seconds milliseconds)
-        migration-template (->template (slurp MIGRATION-TEMPLATE))]
+        migration-template (->template MIGRATION-GROUP MIGRATION-TEMPLATE)]
     (doseq [direction ["up" "down"]]
       (let [filename (str prefix "_" migration-name "." direction ".sql")
             migrations-dir (File. MIGRATIONS-PATH)
@@ -100,7 +118,7 @@
                     (clojure.string/replace #"-" "_")
                     (str ".clj"))
         test-file (File. test-path)
-        test-template (->template (slurp TEST-TEMPLATE)
+        test-template (->template TEST-GROUP TEST-TEMPLATE
                                   {"test_namespace" test-namespace
                                    "source_namespace" source-namespace})]
     (if (or (.. test-file getParentFile exists) (.. test-file getParentFile mkdirs))
@@ -123,7 +141,7 @@
                       (clojure.string/replace #"-" "_")
                       (str ".clj"))
         source-file (File. source-path)
-        source-template (->template (slurp SOURCE-TEMPLATE)
+        source-template (->template SOURCE-GROUP SOURCE-TEMPLATE
                                     {"namespace" source-namespace})]
     (if (or (.. source-file getParentFile exists) (.. source-file getParentFile mkdirs))
       (do

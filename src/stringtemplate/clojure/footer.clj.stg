@@ -1,0 +1,3 @@
+footer() ::= <%
+;; vim: set ft=clojure et sta ts=2 sw=2:
+%>

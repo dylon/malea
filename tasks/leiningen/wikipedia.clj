@@ -18,7 +18,7 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(ns leiningen.wikipedia 
+(ns leiningen.wikipedia
   (:use [clojure.tools.cli :only [cli]])
   (:require [leiningen.core.eval :as lein.eval]))
 
@@ -38,42 +38,27 @@
     (println (str "The model you specified is \""model"\". The only model supported is \"corpus\""))
     (System/exit 1)))
 
-(defn- clean! [project table]
-  (if (= table "grams")
-    (lein.eval/eval-in-project project
-      `(do
-         (require 'malea.database
-                  'korma.core)
-         (malea.database/establish-malea-db-connection!)
-         (korma.core/exec-raw [(str
-           "DELETE FROM grams "
-           "WHERE NOT EXISTS ("
-             "SELECT true "
-             "FROM trigrams "
-             "WHERE trigrams.gram_1_id = grams.id "
-                "OR trigrams.gram_2_id = grams.id "
-                "OR trigrams.gram_3_id = grams.id"
-           ") "
-           "AND NOT EXISTS ("
-             "SELECT true "
-             "FROM bigrams "
-             "WHERE bigrams.gram_1_id = grams.id "
-                "OR bigrams.gram_2_id = grams.id"
-           ") "
-           "AND NOT EXISTS ("
-             "SELECT true "
-             "FROM unigrams "
-             "WHERE unigrams.gram_1_id = grams.id"
-           ")")])))
-    (binding [*out* *err*]
-      (println (str "The table you specified is \""table"\". The only table supported is \"grams\""))
-      (System/exit 1))))
+(defn- exec-sql! [project path]
+  (lein.eval/eval-in-project project
+    `(do
+       (require 'malea.database
+                'clojure.java.jdbc)
+       (malea.database/establish-malea-db-connection!)
+       (let [sql# (slurp (clojure.java.io/input-stream ~path))]
+         (clojure.java.jdbc/with-connection
+           (malea.database/malea-db-connection)
+           (clojure.java.jdbc/do-prepared sql#))))))
 
-(defn- drop-indices! [])
+(defn- drop-constraints! [project]
+  (exec-sql! project "src/postgresql/tasks/drop_constraints.pgsql"))
 
-(defn- restore-indices! [])
+(defn- clean-data! [project]
+  (exec-sql! project "src/postgresql/tasks/clean_data.pgsql"))
 
-(defn- print-stats [model]
+(defn- restore-constraints! [project]
+  (exec-sql! project "src/postgresql/tasks/restore_constraints.pgsql"))
+
+(defn- print-stats [project model]
   (if (= model "invalid")
     '()
     (binding [*out* *err*]
@@ -83,18 +68,18 @@
 (defn- parse-args [args]
   (cli args
     ["-t" "--train" "Trains a model of the type specified."]
-    ["-c" "--clean" "Cleans the specified table."]
-    ["-d" "--drop-indices" "Drop most of the indices to speed up insertions." :flag true]
-    ["-r" "--restore-indices" "Restore any dropped indices for data integrity." :flag true]
-    ["-s" "--stats" "Print statistics of the given type."]))
+    ["-d" "--drop-constraints" "Drops the database constraints for bulk importation." :flag true]
+    ["-c" "--clean-data" "Cleans the database. If this is needed, there is a bug." :flag true]
+    ["-r" "--restore-constraints" "Restores the database constraints." :flag true]
+    ["-s" "--print-stats" "Print statistics of the given type."]))
 
 (defn wikipedia [project & args]
   (let [[options args banner] (parse-args args)]
     (doseq [[command arguments] options]
-      (case command 
-        :drop-indices (when arguments (drop-indices!))
-        :restore-indices (when arguments (restore-indices!))
+      (case command
         :train (when arguments (train! project arguments))
-        :clean (when arguments (clean! project arguments))
-        :stats (when arguments (print-stats arguments))))))
+        :drop-constraints (when arguments (drop-constraints! project))
+        :clean-data (when arguments (clean-data! project))
+        :restore-constraints (when arguments (restore-constraints! project))
+        :print-stats (when arguments (print-stats project arguments))))))
 

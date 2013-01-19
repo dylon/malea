@@ -1,0 +1,70 @@
+Pros and cons?  This reduces the parameters required for the model, but
+introduces a hierarchical relationship which may impede performance.  Yet, this
+introduces the flexibility of introducing any arbitrary number of consecutive
+n-grams with a constant growth rate.
+
+
+================================================================================
+
+NOTE: This is an unrolled example of a trigram having the following n-gram
+schema:
+
+::: n_grams
++----+-----------+---------+---------+-----------+
+| id | parent_id | page_id | gram_id | frequency |
++----+-----+-----+---------+---------+-----------+
+   ^       |
+ / | \     |
+   +-------+
+
+I've decided to move away from the relational model, but felt inspired to
+engineer an efficient means by which n-grams could be modeled by it.
+
+================================================================================
+
+
+::: pages
++----+-------+----------+----------+------+
+| id | title | redirect | revision | text |
++----+-------+----------+----------+------+
+
+  ^
+/ | \
+  +-----------------------------------------------------+
+                                                        |
+             +--------------------------------+         |
+           \ | /                              |         |
+             v                                |         |
+                                              |         |
+           ::: grams                          |         |
+       \   +----+-------+                     |         |
+  +------> | id | value |                     |         |
+  |    /   +----+-------+                     |         |
+  |                                           |         |
+  |          ^                                |         |
+  |        / | \                              |         |
+  |          +-------------------------------------+    |
+  |                                           |    |    |
+  +------------------+                        |    |    |
+                     |                        |    |    |
+::: unigrams         |                        |    |    |
++----+---------+-----+-----+-----------+      |    |    |
+| id | page_id | gram_1_id | frequency |      |    |    |
++----+---+-----+-----------+-----------+      |    |    |
+  ^      |                                    |    |    |
+/ | \    +----------------------------------------------+
+  |                                           |    |
+  +-----------+                               |    |
+              |         +---------------------+    |
+::: bigrams   |         |                          |
++----+--------+---+-----+-----+-----------+        |
+| id | unigram_id | gram_2_id | frequency |        |
++----+------------+-----------+-----------+        |
+  ^                                                |
+/ | \                                              |
+  +-----------+                                    |
+              |        + --------------------------+
+::: trigrams  |        |
++----+--------+--+-----+-----+-----------+
+| id | bigram_id | gram_3_id | frequency |
++----+-----------+-----+-----+-----------+
