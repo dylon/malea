@@ -32,6 +32,10 @@ PreformattedTag
 : '<pre' .*? '>' .*? '</pre>' -> skip
 ;
 
+MathTag
+: '<math>' .*? '</math>' -> skip
+;
+
 HtmlTag
 : '<' .*? '>' -> skip
 ;

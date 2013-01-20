@@ -18,20 +18,21 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(defproject malea "0.2.0"
+(defproject malea "0.3.0"
   :description "Machine Learning for Information Retrieval and Natural Language Processing (among others)"
   :url "https://github.com/dylon/malea"
   :license {:name "The MIT License"
             :url "http://www.opensource.org/licenses/mit-license.php"}
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [incanter "1.4.1"]
-                 [net.java/textile-j "2.2"]
-                 [org.clojure/data.xml "0.0.6"]
+                 ;[incanter "1.4.1"]
+                 ;[net.java/textile-j "2.2"]
+                 [org.clojure/data.xml "0.0.7"]
                  [org.antlr/antlr4 "4.0-rc-1"]
                  [edu.stanford.nlp/stanford-corenlp "1.3.4"]
                  ;[clojure-opennlp "0.2.0"]
-                 [korma "0.3.0-beta13"]
-                 [postgresql "9.1-901.jdbc4"]
+                 [korma "0.3.0-RC2"]
+                 ;[postgresql "9.1-901.jdbc4"]
+                 [puppetlabs/postgresql "9.2-1002.jdbc4"]
                  [org.clojure/java.jdbc "0.2.3"]
                  [c3p0/c3p0 "0.9.1.2"]
                  [ragtime/ragtime.sql.files "0.3.2"]
@@ -42,8 +43,8 @@
                  [org.clojure/tools.logging "0.2.3"]]
   :plugins [[ragtime/ragtime.lein "0.3.2"]
             [org.antlr/stringtemplate "4.0.7"]]
-  :profiles {:dev {:dependencies [[midje "1.4.0"]]
-                   :plugins [[lein-midje "2.0.1"]
+  :profiles {:dev {:dependencies [[midje "1.5-alpha8"]]
+                   :plugins [[lein-midje "3.0-alpha4"]
                              [org.clojure/tools.cli "0.2.2"]]
                    :ragtime {:migrations ragtime.sql.files/migrations
                              :database "jdbc:postgresql:malea?user=malea"}}

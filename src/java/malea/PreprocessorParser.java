@@ -1,6 +1,6 @@
 // $ANTLR ANTLRVersion> PreprocessorParser.java generatedTimestamp>
 
-	package malea;
+  package malea;
 
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -17,16 +17,16 @@ public class PreprocessorParser extends Parser {
 	protected static final PredictionContextCache _sharedContextCache =
 		new PredictionContextCache();
 	public static final int
-		Titleize=13, Pipe=19, CapitalizedLetters=10, AnyOtherChar=20, HtmlTag=6, 
-		OpenSquareBracket=16, NestedMetadata=1, Ellipsis=9, Emphasis=7, NonBreakSpace=11, 
-		UnorderedList=12, ColonDoubleForwardSlash=18, DoubleCloseSquareBracket=15, 
-		WhiteSpace=8, NestedTable=2, ReferenceTag=4, PreformattedTag=5, CloseSquareBracket=17, 
-		DoubleOpenSquareBracket=14, CategoryTag=3;
+		MathTag=6, Titleize=14, Pipe=20, CapitalizedLetters=11, AnyOtherChar=21, 
+		HtmlTag=7, OpenSquareBracket=17, NestedMetadata=1, Ellipsis=10, Emphasis=8, 
+		NonBreakSpace=12, UnorderedList=13, ColonDoubleForwardSlash=19, DoubleCloseSquareBracket=16, 
+		WhiteSpace=9, NestedTable=2, ReferenceTag=4, PreformattedTag=5, CloseSquareBracket=18, 
+		DoubleOpenSquareBracket=15, CategoryTag=3;
 	public static final String[] tokenNames = {
 		"<INVALID>", "NestedMetadata", "NestedTable", "CategoryTag", "ReferenceTag", 
-		"PreformattedTag", "HtmlTag", "Emphasis", "WhiteSpace", "Ellipsis", "CapitalizedLetters", 
-		"'&nbsp;'", "UnorderedList", "Titleize", "'[['", "']]'", "'['", "']'", 
-		"'://'", "'|'", "AnyOtherChar"
+		"PreformattedTag", "MathTag", "HtmlTag", "Emphasis", "WhiteSpace", "Ellipsis", 
+		"CapitalizedLetters", "'&nbsp;'", "UnorderedList", "Titleize", "'[['", 
+		"']]'", "'['", "']'", "'://'", "'|'", "AnyOtherChar"
 	};
 	public static final int
 		RULE_preprocess = 0, RULE_annotation = 1, RULE_hyperlink = 2;
@@ -93,7 +93,7 @@ public class PreprocessorParser extends Parser {
 			setState(16);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			while ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NestedMetadata) | (1L << NestedTable) | (1L << CategoryTag) | (1L << ReferenceTag) | (1L << PreformattedTag) | (1L << HtmlTag) | (1L << Emphasis) | (1L << WhiteSpace) | (1L << Ellipsis) | (1L << CapitalizedLetters) | (1L << NonBreakSpace) | (1L << UnorderedList) | (1L << Titleize) | (1L << DoubleOpenSquareBracket) | (1L << DoubleCloseSquareBracket) | (1L << OpenSquareBracket) | (1L << CloseSquareBracket) | (1L << ColonDoubleForwardSlash) | (1L << Pipe) | (1L << AnyOtherChar))) != 0)) {
+			while ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NestedMetadata) | (1L << NestedTable) | (1L << CategoryTag) | (1L << ReferenceTag) | (1L << PreformattedTag) | (1L << MathTag) | (1L << HtmlTag) | (1L << Emphasis) | (1L << WhiteSpace) | (1L << Ellipsis) | (1L << CapitalizedLetters) | (1L << NonBreakSpace) | (1L << UnorderedList) | (1L << Titleize) | (1L << DoubleOpenSquareBracket) | (1L << DoubleCloseSquareBracket) | (1L << OpenSquareBracket) | (1L << CloseSquareBracket) | (1L << ColonDoubleForwardSlash) | (1L << Pipe) | (1L << AnyOtherChar))) != 0)) {
 				{
 				setState(14);
 				switch ( getInterpreter().adaptivePredict(_input,0,_ctx) ) {
@@ -211,6 +211,7 @@ public class PreprocessorParser extends Parser {
 							case CategoryTag:
 							case ReferenceTag:
 							case PreformattedTag:
+							case MathTag:
 							case HtmlTag:
 							case Emphasis:
 							case WhiteSpace:
@@ -291,6 +292,7 @@ public class PreprocessorParser extends Parser {
 					case CategoryTag:
 					case ReferenceTag:
 					case PreformattedTag:
+					case MathTag:
 					case HtmlTag:
 					case Emphasis:
 					case WhiteSpace:
@@ -439,7 +441,7 @@ public class PreprocessorParser extends Parser {
 				setState(65); 
 				_errHandler.sync(this);
 				_la = _input.LA(1);
-			} while ( (((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NestedMetadata) | (1L << NestedTable) | (1L << CategoryTag) | (1L << ReferenceTag) | (1L << PreformattedTag) | (1L << HtmlTag) | (1L << Emphasis) | (1L << Ellipsis) | (1L << CapitalizedLetters) | (1L << NonBreakSpace) | (1L << UnorderedList) | (1L << Titleize) | (1L << DoubleOpenSquareBracket) | (1L << DoubleCloseSquareBracket) | (1L << OpenSquareBracket) | (1L << CloseSquareBracket) | (1L << ColonDoubleForwardSlash) | (1L << Pipe) | (1L << AnyOtherChar))) != 0) );
+			} while ( (((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << NestedMetadata) | (1L << NestedTable) | (1L << CategoryTag) | (1L << ReferenceTag) | (1L << PreformattedTag) | (1L << MathTag) | (1L << HtmlTag) | (1L << Emphasis) | (1L << Ellipsis) | (1L << CapitalizedLetters) | (1L << NonBreakSpace) | (1L << UnorderedList) | (1L << Titleize) | (1L << DoubleOpenSquareBracket) | (1L << DoubleCloseSquareBracket) | (1L << OpenSquareBracket) | (1L << CloseSquareBracket) | (1L << ColonDoubleForwardSlash) | (1L << Pipe) | (1L << AnyOtherChar))) != 0) );
 			setState(68); 
 			_errHandler.sync(this);
 			_alt = getInterpreter().adaptivePredict(_input,11,_ctx);
@@ -497,29 +499,29 @@ public class PreprocessorParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\1\1\24S\2\0\7\0\2\1\7\1\2\2\7\2\1\0\1\0\1\0\1\0\1\0\1\0\1\0\1\0\5\0\17"+
+		"\1\1\25S\2\0\7\0\2\1\7\1\2\2\7\2\1\0\1\0\1\0\1\0\1\0\1\0\1\0\1\0\5\0\17"+
 		"\b\0\n\0\f\0\22\t\0\1\0\1\0\1\0\1\1\1\1\1\1\4\1\32\b\1\13\1\f\1\33\4\1"+
 		"\36\b\1\13\1\f\1\37\1\1\5\1#\b\1\n\1\f\1&\t\1\1\1\1\1\1\1\1\1\1\1\4\1"+
 		"-\b\1\13\1\f\1.\4\1\61\b\1\13\1\f\1\62\1\1\1\1\1\1\1\2\1\2\4\2:\b\2\13"+
 		"\2\f\2;\1\2\1\2\4\2@\b\2\13\2\f\2A\1\2\4\2E\b\2\13\2\f\2F\1\2\1\2\5\2"+
-		"K\b\2\n\2\f\2N\t\2\1\2\1\2\1\2\1\2\3\62;L\3\0\2\4\0\5\1\16\17\1\16\17"+
-		"\1\b\b\1\b\b\1\21\21]\0\20\1\0\0\0\2\26\1\0\0\0\4\67\1\0\0\0\6\7\3\2\1"+
+		"K\b\2\n\2\f\2N\t\2\1\2\1\2\1\2\1\2\3\62;L\3\0\2\4\0\5\1\17\20\1\17\20"+
+		"\1\t\t\1\t\t\1\22\22]\0\20\1\0\0\0\2\26\1\0\0\0\4\67\1\0\0\0\6\7\3\2\1"+
 		"\0\7\b\6\0\uffff\0\b\17\1\0\0\0\t\n\3\4\2\0\n\13\6\0\uffff\0\13\17\1\0"+
 		"\0\0\f\r\t\0\0\0\r\17\6\0\uffff\0\16\6\1\0\0\0\16\t\1\0\0\0\16\f\1\0\0"+
 		"\0\17\22\1\0\0\0\20\16\1\0\0\0\20\21\1\0\0\0\21\23\1\0\0\0\22\20\1\0\0"+
-		"\0\23\24\5\uffff\0\0\24\25\6\0\uffff\0\25\1\1\0\0\0\26$\5\16\0\0\27\36"+
+		"\0\23\24\5\uffff\0\0\24\25\6\0\uffff\0\25\1\1\0\0\0\26$\5\17\0\0\27\36"+
 		"\3\2\1\0\30\32\b\0\0\0\31\30\1\0\0\0\32\33\1\0\0\0\33\31\1\0\0\0\33\34"+
 		"\1\0\0\0\34\36\1\0\0\0\35\27\1\0\0\0\35\31\1\0\0\0\36\37\1\0\0\0\37\35"+
-		"\1\0\0\0\37 \1\0\0\0 !\1\0\0\0!#\5\23\0\0\"\35\1\0\0\0#&\1\0\0\0$\"\1"+
+		"\1\0\0\0\37 \1\0\0\0 !\1\0\0\0!#\5\24\0\0\"\35\1\0\0\0#&\1\0\0\0$\"\1"+
 		"\0\0\0$%\1\0\0\0%\60\1\0\0\0&$\1\0\0\0\'(\3\2\1\0()\6\1\uffff\0)\61\1"+
 		"\0\0\0*+\b\1\0\0+-\6\1\uffff\0,*\1\0\0\0-.\1\0\0\0.,\1\0\0\0./\1\0\0\0"+
 		"/\61\1\0\0\0\60\'\1\0\0\0\60,\1\0\0\0\61\62\1\0\0\0\62\63\1\0\0\0\62\60"+
-		"\1\0\0\0\63\64\1\0\0\0\64\65\5\17\0\0\65\66\6\1\uffff\0\66\3\1\0\0\0\67"+
-		"9\5\20\0\08:\b\2\0\098\1\0\0\0:;\1\0\0\0;<\1\0\0\0;9\1\0\0\0<=\1\0\0\0"+
-		"=?\5\22\0\0>@\b\3\0\0?>\1\0\0\0@A\1\0\0\0A?\1\0\0\0AB\1\0\0\0BD\1\0\0"+
-		"\0CE\5\b\0\0DC\1\0\0\0EF\1\0\0\0FD\1\0\0\0FG\1\0\0\0GL\1\0\0\0HI\b\4\0"+
+		"\1\0\0\0\63\64\1\0\0\0\64\65\5\20\0\0\65\66\6\1\uffff\0\66\3\1\0\0\0\67"+
+		"9\5\21\0\08:\b\2\0\098\1\0\0\0:;\1\0\0\0;<\1\0\0\0;9\1\0\0\0<=\1\0\0\0"+
+		"=?\5\23\0\0>@\b\3\0\0?>\1\0\0\0@A\1\0\0\0A?\1\0\0\0AB\1\0\0\0BD\1\0\0"+
+		"\0CE\5\t\0\0DC\1\0\0\0EF\1\0\0\0FD\1\0\0\0FG\1\0\0\0GL\1\0\0\0HI\b\4\0"+
 		"\0IK\6\2\uffff\0JH\1\0\0\0KN\1\0\0\0LM\1\0\0\0LJ\1\0\0\0MO\1\0\0\0NL\1"+
-		"\0\0\0OP\5\21\0\0PQ\6\2\uffff\0Q\5\1\0\0\0\r\16\20\33\35\37$.\60\62;A"+
+		"\0\0\0OP\5\22\0\0PQ\6\2\uffff\0Q\5\1\0\0\0\r\16\20\33\35\37$.\60\62;A"+
 		"FL";
 	public static final ATN _ATN =
 		ATNSimulator.deserialize(_serializedATN.toCharArray());

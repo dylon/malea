@@ -19,14 +19,17 @@
 ;; SOFTWARE.
 
 (ns malea.wikipedia
-  (:use [korma core]
-        [clojure pprint data])
+  (:use korma.core
+        clojure.data
+        clojure.pprint)
   (:require [malea.nlp :as nlp]
             [malea.database :as db]
             [clojure.data.xml :as xml]
             [clojure.java.jdbc :as jdbc]
             [korma.db])
-  (:import org.postgresql.util.PSQLException
+  (:import java.util.concurrent.ArrayBlockingQueue
+           java.util.concurrent.TimeUnit
+           org.postgresql.util.PSQLException
            org.stringtemplate.v4.STGroupFile))
 
 (def ^:private ^:const BATCH-SIZE 250)
@@ -294,7 +297,31 @@
           (:content page-element))))))
 
 (defn insert-pages-from-xml [xml-input-stream]
-  (dorun (->> (:content (xml/parse xml-input-stream :coalescing false))
-    (filter #(= :page (:tag %)))
-    (map (partial process-page-element! {})))))
+  (let [run? (atom true)
+        number-of-threads (+ 2 (.. Runtime getRuntime availableProcessors))
+        queue (ArrayBlockingQueue. (* 10 number-of-threads))
+        terminators (repeat number-of-threads (promise))
+        threads
+          (map
+            (fn [terminated]
+              (doto (Thread.
+                (fn []
+                  (while (or (not (empty? queue)) @run?)
+                    (when-let [page-element (.poll queue 60 TimeUnit/SECONDS)]
+                      (process-page-element! {} page-element)))
+                  (deliver terminated true)))
+                (.start)))
+            terminators)]
+    (dorun threads)
+    (doseq [page-element
+              (->> (:content (xml/parse xml-input-stream
+                     :coalescing false
+                     :namespace-aware false
+                     :replacing-entity-references false
+                     :supporting-external-entities false))
+                (filter #(= :page (:tag %))))]
+      (.put queue page-element))
+    (reset! run? false)
+    (doseq [terminated terminators]
+      @terminated)))
 
