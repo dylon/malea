@@ -306,7 +306,7 @@
             (fn [terminated]
               (doto (Thread.
                 (fn []
-                  (while (or (not (empty? queue)) @run?)
+                  (while @run?
                     (when-let [page-element (.poll queue 60 TimeUnit/SECONDS)]
                       (process-page-element! {} page-element)))
                   (deliver terminated true)))
