@@ -62,17 +62,14 @@
 
 (defn insert-grams-if-not-exist! [records]
   "Inserts new grams into the database.  Each gram should be a string."
-  (loop [batch (take BATCH-SIZE records)
-         records (drop BATCH-SIZE records)
-         gram-map {}]
-    (if (empty? batch) gram-map
-      (let [template (wikipedia-st "insert_grams_if_not_exist")]
-        (.add template "range" (range (count batch)))
-        (recur
-          (take BATCH-SIZE records)
-          (drop BATCH-SIZE records)
-          (reduce #(assoc %1 (:value %2) (:id %2)) gram-map
-            (exec-raw [(.render template) batch] :results)))))))
+  (apply merge
+    (pmap
+      (fn [batch]
+        (let [template (wikipedia-st "insert_grams_if_not_exist")]
+          (.add template "range" (range (count batch)))
+          (reduce #(assoc %1 (:value %2) (:id %2)) {}
+            (exec-raw [(.render template) batch] :results))))
+      (partition-all BATCH-SIZE records))))
 
 (defn reserve-n-grams! [n-gram-count]
   "Reserves the `n-gram-count` identifiers within the `n_grams` table"
@@ -173,29 +170,11 @@
   (let [n-gram-ids (reserve-n-grams! (nlp/count-n-grams gram-trie))
         gram-trie (set-id-and-parent-id gram-trie n-gram-ids)
         n-grams (unwrap-n-grams gram-trie page-id)]
-    (loop [batch (take BATCH-SIZE n-grams)
-           n-grams (drop BATCH-SIZE n-grams)]
-      (when-not (empty? batch)
-        (insert n_grams
-          (values batch))
-        (recur
-          (take BATCH-SIZE n-grams)
-          (drop BATCH-SIZE n-grams))))))
-
-(defn gram-map [gram-values]
-  "Bijection of gram-text onto gram-id from the database."
-  (loop [batch (take BATCH-SIZE gram-values)
-         gram-values (drop BATCH-SIZE gram-values)
-         gram-map {}]
-    (if (empty? batch) gram-map
-      (recur
-        (take BATCH-SIZE gram-values)
-        (drop BATCH-SIZE gram-values)
-        (merge gram-map
-          (reduce #(assoc %1 (:value %2) (:id %2)) {}
-            (select grams
-              (fields :id :value)
-              (where {:value [in batch]}))))))))
+    (dorun
+      (map
+        #(insert n_grams
+          (values %))
+        (partition-all BATCH-SIZE n-grams)))))
 
 (defn trigrams-for-page [^long page-id]
   "Trigrams for the given page."
@@ -234,7 +213,7 @@
       [statement [title id redirect revision text term_sequence]] :results)))
 
 (defn- insert-page-from-xml! [page]
-  (korma.db/transaction
+  ;(korma.db/transaction
     (let [{page-id :id, page-text :text} page
           preprocessed-text (nlp/preprocess page-text)
           term-sequence (nlp/tokenize preprocessed-text)
@@ -246,7 +225,7 @@
           ;; Ignore the raw text for now -- it will consume too much space
           page (assoc (dissoc page :text) :term_sequence term-sequence)]
       (insert-or-replace-page! page)
-      (insert-n-grams! gram-map page-id gram-trie))))
+      (insert-n-grams! gram-map page-id gram-trie)));)
 
 (defn- page-is-valid? [page]
   (and (:id page) (:title page) (:revision page) (:text page)))
@@ -299,7 +278,7 @@
 (defn insert-pages-from-xml [xml-input-stream]
   (let [run? (atom true)
         number-of-threads (+ 2 (.. Runtime getRuntime availableProcessors))
-        queue (ArrayBlockingQueue. (* 10 number-of-threads))
+        queue (ArrayBlockingQueue. (* 32 number-of-threads))
         terminators (repeat number-of-threads (promise))
         threads
           (map
