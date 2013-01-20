@@ -294,10 +294,10 @@
     (dorun threads)
     (doseq [page-element
               (->> (:content (xml/parse xml-input-stream
-                     :coalescing false
-                     :namespace-aware false
-                     :replacing-entity-references false
-                     :supporting-external-entities false))
+                    :coalescing false
+                    :namespace-aware false
+                    :replacing-entity-references false
+                    :supporting-external-entities false))
                 (filter #(= :page (:tag %))))]
       (.put queue page-element))
     (reset! run? false)
